@@ -21,24 +21,28 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isLive = true }) => {
       <View style={styles.titleContainer}>
         <View style={styles.logoRow}>
           <View style={[styles.shieldIconWrapper, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
-            <ShieldAlert size={24} color={colors.steelBlue} />
+            <ShieldAlert size={20} color={colors.steelBlue} />
           </View>
-          <View>
-            <Text style={[styles.appTitle, { color: colors.textPrimary }]}>RAKSHAK NER</Text>
-            <Text style={[styles.appSubtitle, { color: colors.steelBlue }]}>Landslide Early Warning & AI Shield</Text>
+          <View style={styles.titleTextCol}>
+            <Text style={[styles.appTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+              RAKSHAK NER
+            </Text>
+            <Text style={[styles.appSubtitle, { color: colors.steelBlue }]} numberOfLines={1}>
+              Landslide Early Warning
+            </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.actionRow}>
-        {/* Live Indicator */}
+        {/* Live Indicator - Compact */}
         <View style={[styles.liveBadge, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
           <View style={[styles.pulsingDot, { backgroundColor: colors.success }]} />
           <Text style={[styles.liveText, { color: colors.success }]}>LIVE</Text>
         </View>
 
         {/* Uiverse Theme Switcher */}
-        <ThemeToggleSwitch scale={0.88} />
+        <ThemeToggleSwitch scale={0.82} />
 
         {/* Helpline Button */}
         <TouchableOpacity
@@ -46,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isLive = true }) => {
           onPress={() => router.push('/modal')}
           activeOpacity={0.8}
         >
-          <PhoneCall size={15} color={colors.danger} />
+          <PhoneCall size={14} color={colors.danger} />
           <Text style={[styles.helplineText, { color: colors.danger }]}>1078</Text>
         </TouchableOpacity>
 
@@ -73,13 +77,13 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isLive = true }) => {
           activeOpacity={0.8}
         >
           {isAuthenticated && currentRole === 'admin' ? (
-            <ShieldAlert size={19} color={colors.danger} />
+            <ShieldAlert size={17} color={colors.danger} />
           ) : isAuthenticated && currentRole === 'tester' ? (
-            <FlaskConical size={19} color={colors.warning} />
+            <FlaskConical size={17} color={colors.warning} />
           ) : isAuthenticated && user?.photoUrl ? (
             <Image source={{ uri: user.photoUrl }} style={styles.userAvatarImg} />
           ) : (
-            <User size={18} color={colors.steelBlue} />
+            <User size={16} color={colors.steelBlue} />
           )}
         </TouchableOpacity>
       </View>
@@ -89,9 +93,9 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isLive = true }) => {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 18,
-    paddingTop: Platform.OS === 'ios' ? 14 : 18,
-    paddingBottom: 16,
+    paddingHorizontal: 12,
+    paddingTop: Platform.OS === 'ios' ? 12 : 14,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -101,46 +105,55 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 3,
+    gap: 8,
   },
   titleContainer: {
     flex: 1,
+    minWidth: 0,
   },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    minWidth: 0,
+  },
+  titleTextCol: {
+    flex: 1,
+    minWidth: 0,
   },
   shieldIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   appTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '900',
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   appSubtitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 1,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
+    flexShrink: 0,
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 14,
+    gap: 4,
   },
   pulsingDot: {
     width: 7,

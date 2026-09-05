@@ -956,6 +956,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexWrap: 'wrap',
+    marginTop: 4,
   },
   switchAccountBtn: {
     flexDirection: 'row',
@@ -985,12 +987,14 @@ const styles = StyleSheet.create({
   },
   adminStatsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginBottom: 14,
+    flexWrap: 'wrap',
   },
   adminStatCard: {
     flex: 1,
-    padding: 12,
+    minWidth: 80,
+    padding: 10,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
@@ -1000,7 +1004,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   adminStatLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
     marginTop: 2,
   },
