@@ -219,7 +219,7 @@ STRICT BOUNDARY & BEHAVIOR RULES:
    - Landslide detection, early warning signs (spring water discoloration, slope tension cracks, tilted poles/trees).
    - Sensor telemetry (piezometer pore water pressure, tiltmeters, rainfall gauges, soil moisture).
    - Highway corridor safety advisories in India (NH-10 Sevoke-Gangtok, NH-58 Rishikesh-Badrinath, NH-31A, NH-44, NH-13).
-   - Emergency helplines (NDRF 1078, SDMA 1070, Police 112, Medical 108).
+   - Emergency helplines (Unified 112, NDRF 1078, SDMA 1070/1079, District Control 1077, Assam SDMA 0361-2237219 / 09401044617, Meghalaya SDMA 0364-2502098 / 6009924512, Arunachal SDMA 8787336331).
    - Incident reporting, live camera geotagging, AI verification, and disaster evacuation procedures.
 3. OUT-OF-SCOPE TOPICS (STRICTLY REFUSE):
    - If the user asks about ANYTHING outside this landslide detection & disaster management project (such as general knowledge, writing random essays, generating unrelated code/games, math homework, politics, pop culture, movie trivia, recipes, gaming, etc.):
@@ -278,8 +278,8 @@ Feel free to ask me about highway corridor alerts, sensor readings, early warnin
 
 function getOfflineChatResponse(prompt: string): string {
   const lower = prompt.toLowerCase();
-  if (lower.includes('emergency') || lower.includes('help') || lower.includes('contact') || lower.includes('number')) {
-    return `🚨 **Emergency Contacts & Helplines:**\n\n• **NDRF Control Room:** 1078 / 011-24363260\n• **National Emergency Number:** 112\n• **State Disaster Management (SDMA):** 1070\n• **Medical Ambulance:** 108\n• **Disaster Early Warning Control:** 1800-180-1717\n\nStay on elevated, stable ground away from drainage channels.`;
+  if (lower.includes('emergency') || lower.includes('help') || lower.includes('contact') || lower.includes('number') || lower.includes('room') || lower.includes('phone')) {
+    return `🚨 **Disaster Control Rooms & Emergency Hotlines:**\n\n**Toll-Free Emergency Hotlines:**\n• **All-in-One National Emergency:** 112\n• **NDRF Landslide Rescue & Evacuation:** 1078\n• **State Emergency Operation Centres:** 1070 / 1079\n• **Regional District Control Room:** 1077\n\n**State Disaster Control Rooms:**\n• **Assam State Control Room:** 0361-2237219 / 09401044617\n• **Meghalaya State Control Room:** 0364-2502098 / 6009924512\n• **Arunachal Pradesh Helpline:** 8787336331\n\nStay on elevated, stable ground away from drainage channels.`;
   }
   if (lower.includes('nh-10') || lower.includes('nh10') || lower.includes('sikkim') || lower.includes('gangtok')) {
     return `🛣️ **NH-10 (Sevoke – Gangtok Corridor) Advisory:**\n\n• High-vulnerability zones: 29th Mile, Bhalu Khola, and Likhu Veer.\n• Current Protocol: Night-time travel restrictions during monsoon rainfall (>40mm/day).\n• Always check border patrol advisories before proceeding past Teesta Bazaar.`;

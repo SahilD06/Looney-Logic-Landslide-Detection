@@ -18,7 +18,7 @@ export default function AlertsScreen() {
   const [selectedTab, setSelectedTab] = useState<'advisories' | 'shelters' | 'helplines'>('advisories');
 
   const handleCall = (number: string) => {
-    const cleanNum = number.split('/')[0].trim();
+    const cleanNum = number.replace(/[^0-9+]/g, '').trim();
     if (Platform.OS === 'web') {
       window.open(`tel:${cleanNum}`);
     } else {
@@ -150,13 +150,18 @@ export default function AlertsScreen() {
 
         {selectedTab === 'helplines' && (
           <View style={styles.section}>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>24x7 Quick-Dial Disaster Control Directory</Text>
-            {EMERGENCY_CONTACTS.map((contact, index) => (
-              <TouchableOpacity
+            {/* Toll-Free Emergency Hotlines */}
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 4 }]}>
+              Toll-Free Emergency Hotlines
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+              Native emergency shortcodes for immediate multi-agency and district dispatch
+            </Text>
+
+            {EMERGENCY_CONTACTS.filter(c => c.category === 'Toll-Free Hotline').map((contact, index) => (
+              <View
                 key={index}
                 style={[styles.contactCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
-                onPress={() => handleCall(contact.number)}
-                activeOpacity={0.8}
               >
                 <View style={[styles.contactIconCircle, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}>
                   <PhoneCall size={20} color={colors.danger} />
@@ -164,10 +169,63 @@ export default function AlertsScreen() {
                 <View style={styles.contactInfo}>
                   <Text style={[styles.contactTitle, { color: colors.textPrimary }]}>{contact.title}</Text>
                   <Text style={[styles.contactType, { color: colors.textSecondary }]}>{contact.type}</Text>
-                  <Text style={[styles.contactNumber, { color: colors.danger }]}>{contact.number}</Text>
+                  <View style={styles.numberBtnRow}>
+                    {contact.number.split('/').map((subNum, sIdx) => {
+                      const clean = subNum.trim();
+                      return (
+                        <TouchableOpacity
+                          key={sIdx}
+                          style={[styles.contactCallPill, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}
+                          onPress={() => handleCall(clean)}
+                          activeOpacity={0.8}
+                        >
+                          <PhoneCall size={12} color={colors.danger} />
+                          <Text style={[styles.contactCallPillText, { color: colors.danger }]}>{clean}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </View>
-                <ChevronRight size={20} color={colors.textMuted} />
-              </TouchableOpacity>
+              </View>
+            ))}
+
+            {/* State Disaster Management Control Rooms */}
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 18 }]}>
+              State Disaster Management Control Rooms
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+              Dedicated regional operations, rescue coordinates, and localized relief camp desks
+            </Text>
+
+            {EMERGENCY_CONTACTS.filter(c => c.category === 'State Control Room').map((contact, index) => (
+              <View
+                key={index}
+                style={[styles.contactCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
+              >
+                <View style={[styles.contactIconCircle, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
+                  <ShieldAlert size={20} color={colors.steelBlue} />
+                </View>
+                <View style={styles.contactInfo}>
+                  <Text style={[styles.contactTitle, { color: colors.textPrimary }]}>{contact.title}</Text>
+                  <Text style={[styles.contactType, { color: colors.textSecondary }]}>{contact.type}</Text>
+                  <View style={styles.numberBtnRow}>
+                    {contact.number.split('/').map((subNum, sIdx) => {
+                      const clean = subNum.trim();
+                      return (
+                        <TouchableOpacity
+                          key={sIdx}
+                          style={[styles.contactCallPill, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
+                          onPress={() => handleCall(clean)}
+                          activeOpacity={0.8}
+                        >
+                          <PhoneCall size={12} color={colors.steelBlue} />
+                          <Text style={[styles.contactCallPillText, { color: colors.textPrimary }]}>{clean}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
             ))}
           </View>
         )}
@@ -221,9 +279,14 @@ const styles = StyleSheet.create({
   section: {
     gap: 16,
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
   sectionSubtitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '600',
     marginBottom: 4,
   },
   alertCard: {
@@ -367,10 +430,25 @@ const styles = StyleSheet.create({
   contactType: {
     fontSize: 11,
     marginTop: 2,
+    marginBottom: 6,
   },
-  contactNumber: {
-    fontSize: 14,
-    fontWeight: '900',
-    marginTop: 3,
+  numberBtnRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  contactCallPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+  },
+  contactCallPillText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

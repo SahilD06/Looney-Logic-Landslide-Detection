@@ -9,7 +9,7 @@ export default function EmergencyModal() {
   const { colors, isDark } = useAppTheme();
 
   const handleCall = (num: string) => {
-    const cleanNum = num.split('/')[0].trim();
+    const cleanNum = num.replace(/[^0-9+]/g, '').trim();
     if (Platform.OS === 'web') {
       window.open(`tel:${cleanNum}`);
     } else {
@@ -51,25 +51,67 @@ export default function EmergencyModal() {
           </View>
         </View>
 
-        {/* 24x7 Helplines */}
+        {/* Toll-Free Emergency Hotlines */}
         <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>24x7 Emergency Helplines</Text>
-          {EMERGENCY_CONTACTS.map((item, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[styles.contactRow, { borderBottomColor: colors.borderSoft }]}
-              onPress={() => handleCall(item.number)}
-              activeOpacity={0.7}
-            >
-              <View style={{ flex: 1 }}>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Toll-Free Emergency Hotlines</Text>
+          <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            Natively routed shortcodes across local cellular and landline networks for fast-response dispatch.
+          </Text>
+          {EMERGENCY_CONTACTS.filter(c => c.category === 'Toll-Free Hotline').map((item, idx) => (
+            <View key={idx} style={[styles.contactRow, { borderBottomColor: colors.borderSoft }]}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={[styles.contactTitle, { color: colors.textPrimary }]}>{item.title}</Text>
                 <Text style={[styles.contactType, { color: colors.textSecondary }]}>{item.type}</Text>
               </View>
-              <View style={[styles.callBadge, { backgroundColor: colors.danger }]}>
-                <PhoneCall size={14} color="#ffffff" />
-                <Text style={styles.callBadgeText}>{item.number.split('/')[0]}</Text>
+              <View style={styles.numberBtnGroup}>
+                {item.number.split('/').map((subNum, subIdx) => {
+                  const clean = subNum.trim();
+                  return (
+                    <TouchableOpacity
+                      key={subIdx}
+                      style={[styles.callBadge, { backgroundColor: colors.danger }]}
+                      onPress={() => handleCall(clean)}
+                      activeOpacity={0.8}
+                    >
+                      <PhoneCall size={12} color="#ffffff" />
+                      <Text style={styles.callBadgeText}>{clean}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+
+        {/* State Disaster Management Control Rooms */}
+        <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>State Disaster Management Control Rooms</Text>
+          <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            Direct regional command for incident coordinates, ground rescue teams, and relief camp services.
+          </Text>
+          {EMERGENCY_CONTACTS.filter(c => c.category === 'State Control Room').map((item, idx) => (
+            <View key={idx} style={[styles.contactRow, { borderBottomColor: colors.borderSoft }]}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={[styles.contactTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                <Text style={[styles.contactType, { color: colors.textSecondary }]}>{item.type}</Text>
+              </View>
+              <View style={styles.numberBtnGroup}>
+                {item.number.split('/').map((subNum, subIdx) => {
+                  const clean = subNum.trim();
+                  return (
+                    <TouchableOpacity
+                      key={subIdx}
+                      style={[styles.callBadge, { backgroundColor: colors.steelBlue }]}
+                      onPress={() => handleCall(clean)}
+                      activeOpacity={0.8}
+                    >
+                      <PhoneCall size={12} color="#ffffff" />
+                      <Text style={styles.callBadgeText}>{clean}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
           ))}
         </View>
 
@@ -130,7 +172,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: '900',
-    marginBottom: 14,
+    marginBottom: 4,
+  },
+  cardDescription: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 12,
   },
   checkItem: {
     flexDirection: 'row',
@@ -149,6 +196,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
+    gap: 8,
+    flexWrap: 'wrap',
   },
   contactTitle: {
     fontSize: 13,
@@ -158,17 +207,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
+  numberBtnGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
   callBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: 8,
-    gap: 6,
+    gap: 5,
   },
   callBadgeText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   footerNote: {

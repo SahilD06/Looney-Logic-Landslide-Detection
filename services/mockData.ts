@@ -306,10 +306,57 @@ export const EMERGENCY_SHELTERS: EmergencyShelter[] = [
   },
 ];
 
-export const EMERGENCY_CONTACTS = [
-  { title: 'National Disaster Response Force (NDRF)', number: '1078 / 9401044610', type: 'Rescue & Evacuation' },
-  { title: 'State Disaster Management Control Room', number: '1070 / 1077', type: 'Regional Command' },
-  { title: 'Border Roads Organisation (BRO) Slopes Desk', number: '0364-2501234', type: 'Highway Clearance' },
-  { title: 'Emergency Ambulance Services', number: '108', type: 'Medical' },
-  { title: 'Police Emergency Help', number: '112', type: 'Immediate Response' },
+export interface EmergencyContact {
+  title: string;
+  number: string;
+  type: string;
+  category: 'State Control Room' | 'Toll-Free Hotline';
+}
+
+export const EMERGENCY_CONTACTS: EmergencyContact[] = [
+  // Toll-Free Emergency Hotlines
+  {
+    title: 'All-in-One National Emergency',
+    number: '112',
+    type: 'Unified Police, Medical & Rescue',
+    category: 'Toll-Free Hotline',
+  },
+  {
+    title: 'National Disaster Response Force (NDRF)',
+    number: '1078',
+    type: '24x7 Landslide Rescue & Evacuation',
+    category: 'Toll-Free Hotline',
+  },
+  {
+    title: 'State Emergency Operation Centres (SEOC)',
+    number: '1070 / 1079',
+    type: 'State-Level Emergency Operations',
+    category: 'Toll-Free Hotline',
+  },
+  {
+    title: 'Regional Relief & Rescue (District Control)',
+    number: '1077',
+    type: 'Direct Specific District Control Room',
+    category: 'Toll-Free Hotline',
+  },
+
+  // State Disaster Management Control Rooms
+  {
+    title: 'Assam State Control Room (ASDMA)',
+    number: '0361-2237219 / 09401044617',
+    type: 'Regional Operations, Rescue & Camps',
+    category: 'State Control Room',
+  },
+  {
+    title: 'Meghalaya State Control Room (SDMA)',
+    number: '0364-2502098 / 6009924512',
+    type: 'Regional Operations & Rescue Coordinates',
+    category: 'State Control Room',
+  },
+  {
+    title: 'Arunachal Pradesh Helpline (SDMA)',
+    number: '8787336331',
+    type: 'Regional Operations & Localized Camps',
+    category: 'State Control Room',
+  },
 ];
