@@ -65,8 +65,60 @@ export default function FieldReportScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
 
-  // Hidden native camera fallback input
+  //hidden native camera fallback input
   const fileInputRef = useRef<any>(null);
+
+  // Initialize and mount live camera stream whenever camera becomes active or facing changes
+  useEffect(() => {
+    if (!isCameraActive || Platform.OS !== 'web' || typeof navigator === 'undefined') return;
+
+    let stream: MediaStream | null = null;
+
+    const startStream = async () => {
+      try {
+        setCameraError(null);
+        // Mobile-friendly flexible constraints
+        const constraints: MediaStreamConstraints = {
+          video: {
+            facingMode: { ideal: cameraFacing },
+          },
+          audio: false,
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        mediaStreamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          try {
+            await videoRef.current.play();
+          } catch (e) {
+            console.warn('Video auto-play warning:', e);
+          }
+        }
+      } catch (err: any) {
+        console.warn('Camera stream error:', err);
+        setCameraError('Live viewfinder blocked. Opening native phone camera...');
+        setIsCameraActive(false);
+        // Trigger phone native camera directly
+        if (fileInputRef.current) {
+          fileInputRef.current.click();
+        }
+      }
+    };
+
+    // Small timeout ensures video element is mounted in DOM
+    const timer = setTimeout(() => {
+      startStream();
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [isCameraActive, cameraFacing]);
 
   // Cleanup camera stream on unmount
   useEffect(() => {
@@ -104,35 +156,17 @@ export default function FieldReportScreen() {
   };
 
   // Start Live Camera Viewfinder
-  const startLiveCamera = async (facing: 'environment' | 'user' = cameraFacing) => {
+  const startLiveCamera = (facing: 'environment' | 'user' = cameraFacing) => {
     setCameraError(null);
+    setCameraFacing(facing);
     setIsCameraActive(true);
+  };
 
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-      try {
-        stopLiveCamera();
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: facing,
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-          audio: false,
-        });
-        mediaStreamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-      } catch (err: any) {
-        console.warn('getUserMedia camera stream error:', err);
-        setCameraError('Camera access denied or unavailable. Using direct capture fallback.');
-        // Fallback to camera capture intent
-        if (fileInputRef.current) fileInputRef.current.click();
-      }
-    } else {
-      // Mobile native camera trigger
-      if (fileInputRef.current) fileInputRef.current.click();
+  // Trigger Phone Native Camera Directly
+  const triggerNativeCamera = () => {
+    handleDetectGPS();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -149,7 +183,6 @@ export default function FieldReportScreen() {
   const toggleCameraFacing = () => {
     const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
     setCameraFacing(nextFacing);
-    startLiveCamera(nextFacing);
   };
 
   // Shutter Action: Snap Photo From Live Camera Viewfinder
@@ -428,19 +461,35 @@ export default function FieldReportScreen() {
               >
                 {/* 1. Camera Trigger - Enforces Live Photo Only */}
                 {imageState === 'none' && !isCameraActive && (
-                  <TouchableOpacity style={styles.uploadTrigger} onPress={() => startLiveCamera()} activeOpacity={0.85}>
+                  <View style={styles.uploadTrigger}>
                     <View style={[styles.cameraIconCircle, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
                       <Camera size={36} color={colors.steelBlue} />
                     </View>
-                    <Text style={[styles.uploadTriggerTitle, { color: colors.textPrimary }]}>Open Live Hazard Camera</Text>
+                    <Text style={[styles.uploadTriggerTitle, { color: colors.textPrimary }]}>Live Ground Camera Capture</Text>
                     <Text style={[styles.uploadTriggerSub, { color: colors.textMuted }]}>
-                      ⚡ Mandatory Live Capture: Gallery uploads are blocked to prevent false alarms. Opens live device camera with instant GPS & timestamp lock.
+                      ⚡ Mandatory Live Capture: Opens your device camera with instant GPS lock and anti-fraud timestamping.
                     </Text>
-                    <View style={[styles.liveCameraPill, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}>
-                      <View style={[styles.pulsingRedDot, { backgroundColor: colors.danger }]} />
-                      <Text style={[styles.liveCameraPillText, { color: colors.danger }]}>Live Viewfinder Required</Text>
+
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+                      <TouchableOpacity
+                        style={[styles.primaryCameraBtn, { backgroundColor: colors.steelBlue }]}
+                        onPress={() => startLiveCamera()}
+                        activeOpacity={0.85}
+                      >
+                        <Camera size={16} color="#ffffff" />
+                        <Text style={styles.primaryCameraBtnText}>Open Live Viewfinder</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.secondaryCameraBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
+                        onPress={triggerNativeCamera}
+                        activeOpacity={0.85}
+                      >
+                        <Radio size={16} color={colors.danger} />
+                        <Text style={[styles.secondaryCameraBtnText, { color: colors.textPrimary }]}>Phone Native Camera</Text>
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 )}
 
                 {/* 2. Live Camera Viewfinder Screen with Shutter */}
@@ -1145,5 +1194,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  primaryCameraBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  primaryCameraBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  secondaryCameraBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  secondaryCameraBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
