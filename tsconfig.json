@@ -12,7 +12,17 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
+<<<<<<< HEAD
     "expo-env.d.ts",
     "nativewind-env.d.ts"
   ]
 }
+=======
+    "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "legacy-web"
+  ]
+}
+>>>>>>> b975479ddc28a837af2451e176af696b66432c34

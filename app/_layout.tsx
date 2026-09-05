@@ -1,4 +1,5 @@
 import { useFonts } from 'expo-font';
+<<<<<<< HEAD
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useRef } from 'react';
@@ -8,6 +9,19 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '../lib/supabase';
 
 export { ErrorBoundary } from 'expo-router';
+=======
+import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
+import 'react-native-reanimated';
+import { ThemeProvider } from '../context/ThemeContext';
+import { AuthProvider } from '../context/AuthContext';
+import { GeminiChatbot } from '../components/GeminiChatbot';
+
+export {
+  ErrorBoundary,
+} from 'expo-router';
+>>>>>>> b975479ddc28a837af2451e176af696b66432c34
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -34,6 +48,7 @@ export default function RootLayout() {
     return null;
   }
 
+<<<<<<< HEAD
   return <RootLayoutNav />;
 }
 
@@ -78,5 +93,17 @@ function RootLayoutNav() {
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
     </ThemeProvider>
+=======
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+        <GeminiChatbot />
+      </ThemeProvider>
+    </AuthProvider>
+>>>>>>> b975479ddc28a837af2451e176af696b66432c34
   );
 }
