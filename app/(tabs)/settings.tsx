@@ -291,7 +291,21 @@ export default function SettingsScreen() {
           /* SIGNED IN USER PROFILE CARD */
           <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
             <View style={styles.profileRow}>
-              <Image source={{ uri: user?.photoUrl }} style={styles.avatar} />
+              {currentRole === 'admin' ? (
+                <View style={[styles.avatar, styles.roleAvatarBox, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}>
+                  <ShieldAlert size={32} color={colors.danger} />
+                </View>
+              ) : currentRole === 'tester' ? (
+                <View style={[styles.avatar, styles.roleAvatarBox, { backgroundColor: colors.warningBg, borderColor: colors.warningBorder }]}>
+                  <FlaskConical size={32} color={colors.warning} />
+                </View>
+              ) : user?.photoUrl ? (
+                <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.roleAvatarBox, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
+                  <User size={32} color={colors.steelBlue} />
+                </View>
+              )}
               <View style={styles.profileInfoCol}>
                 <View style={styles.profileNameRow}>
                   <Text style={[styles.profileName, { color: colors.textPrimary }]}>{user?.name}</Text>
@@ -850,6 +864,10 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     borderWidth: 2,
     borderColor: '#6B7C98',
+  },
+  roleAvatarBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   profileInfoCol: {
     flex: 1,

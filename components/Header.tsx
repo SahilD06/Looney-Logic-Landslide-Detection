@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
-import { ShieldAlert, PhoneCall, Sun, Moon, User } from 'lucide-react-native';
+import { ShieldAlert, PhoneCall, Sun, Moon, User, FlaskConical } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAppTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +13,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onRefresh, isLive = true }) => {
   const { colors, isDark } = useAppTheme();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, currentRole } = useAuth();
   const router = useRouter();
 
   return (
@@ -52,11 +52,31 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isLive = true }) => {
 
         {/* User Avatar / Login Shortcut */}
         <TouchableOpacity
-          style={[styles.userButton, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
+          style={[
+            styles.userButton,
+            {
+              backgroundColor:
+                currentRole === 'admin'
+                  ? colors.dangerBg
+                  : currentRole === 'tester'
+                  ? colors.warningBg
+                  : colors.subPanel,
+              borderColor:
+                currentRole === 'admin'
+                  ? colors.dangerBorder
+                  : currentRole === 'tester'
+                  ? colors.warningBorder
+                  : colors.border,
+            },
+          ]}
           onPress={() => router.push('/(tabs)/settings')}
           activeOpacity={0.8}
         >
-          {isAuthenticated && user?.photoUrl ? (
+          {isAuthenticated && currentRole === 'admin' ? (
+            <ShieldAlert size={19} color={colors.danger} />
+          ) : isAuthenticated && currentRole === 'tester' ? (
+            <FlaskConical size={19} color={colors.warning} />
+          ) : isAuthenticated && user?.photoUrl ? (
             <Image source={{ uri: user.photoUrl }} style={styles.userAvatarImg} />
           ) : (
             <User size={18} color={colors.steelBlue} />

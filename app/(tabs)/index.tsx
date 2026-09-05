@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Header } from '../../components/Header';
 import { RiskGauge } from '../../components/RiskGauge';
@@ -15,8 +16,9 @@ import { SOSBanner } from '../../components/SOSBanner';
 import { fetchLiveTelemetry, fetchNasaEvents, TelemetryData, NasaEvent } from '../../services/api';
 import { calculateRisk, RiskEvaluation } from '../../services/aiEngine';
 import { CONNECTIVITY_STATUS } from '../../services/mockData';
-import { MapPin, Navigation, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { MapPin, Navigation, ChevronLeft, ChevronRight, Crosshair, RefreshCw } from 'lucide-react-native';
 import { useAppTheme } from '../../context/ThemeContext';
+import { requestUserLocation, UserLocation } from '../../services/locationService';
 
 export default function DashboardScreen() {
   const { colors, isDark } = useAppTheme();
@@ -26,6 +28,13 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [simulatedDanger, setSimulatedDanger] = useState<boolean>(false);
   const [sosStatus, setSosStatus] = useState<'none' | 'needs_help' | 'safe'>('none');
+  const [userLocation, setUserLocation] = useState<UserLocation>({
+    latitude: 25.5788,
+    longitude: 91.8933,
+    locationName: 'East Khasi Hills • Shillong Sector',
+    isLiveGps: false,
+  });
+  const [isLocating, setIsLocating] = useState<boolean>(false);
   const corridorScrollRef = useRef<ScrollView>(null);
   const [scrollOffset, setScrollOffset] = useState<number>(0);
 
@@ -54,10 +63,10 @@ export default function DashboardScreen() {
     corridorScrollRef.current?.scrollTo({ x: newOffset, animated: true });
   };
 
-  const loadData = async () => {
+  const loadData = async (lat = userLocation.latitude, lon = userLocation.longitude) => {
     try {
       const [tel, nasa] = await Promise.all([
-        fetchLiveTelemetry(25.5788, 91.8933),
+        fetchLiveTelemetry(lat, lon),
         fetchNasaEvents(),
       ]);
       setTelemetry(tel);
@@ -70,13 +79,28 @@ export default function DashboardScreen() {
     }
   };
 
+  const autoTrackLocation = async () => {
+    setIsLocating(true);
+    try {
+      const loc = await requestUserLocation();
+      setUserLocation(loc);
+      await loadData(loc.latitude, loc.longitude);
+    } catch (e) {
+      console.warn('Location tracking error:', e);
+      await loadData();
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
   useEffect(() => {
-    loadData();
+    // Automatically request location permission & acquire GPS position on load
+    autoTrackLocation();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    autoTrackLocation();
   };
 
   const risk: RiskEvaluation = calculateRisk('NER Regional', telemetry, simulatedDanger);
@@ -93,12 +117,48 @@ export default function DashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.steelBlue} />
         }
       >
-        {/* Quick Location & Status Pill - Enlarged */}
+        {/* Quick Location & Status Pill - Live GPS Auto-Tracking */}
         <View style={[styles.locationBar, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           <View style={styles.locationLeft}>
-            <MapPin size={16} color={colors.steelBlue} />
-            <Text style={[styles.locationText, { color: colors.textPrimary }]}>East Khasi Hills • Shillong Sector</Text>
+            <TouchableOpacity
+              style={[
+                styles.gpsIconBtn,
+                {
+                  backgroundColor: userLocation.isLiveGps ? colors.successBg : colors.subPanel,
+                  borderColor: userLocation.isLiveGps ? colors.successBorder : colors.border,
+                },
+              ]}
+              onPress={autoTrackLocation}
+              disabled={isLocating}
+              activeOpacity={0.7}
+            >
+              {isLocating ? (
+                <ActivityIndicator size="small" color={colors.steelBlue} />
+              ) : (
+                <MapPin size={15} color={userLocation.isLiveGps ? colors.success : colors.steelBlue} />
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.locationInfoCol}>
+              <View style={styles.locationTitleRow}>
+                <Text style={[styles.locationText, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {userLocation.locationName}
+                </Text>
+                {userLocation.isLiveGps && (
+                  <View style={[styles.liveGpsBadge, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
+                    <View style={[styles.liveGpsDot, { backgroundColor: colors.success }]} />
+                    <Text style={[styles.liveGpsText, { color: colors.success }]}>
+                      Live GPS {userLocation.accuracy ? `(±${userLocation.accuracy}m)` : ''}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.locationCoordsText, { color: colors.textMuted }]}>
+                {userLocation.latitude.toFixed(4)}°N, {userLocation.longitude.toFixed(4)}°E
+              </Text>
+            </View>
           </View>
+
           <View style={styles.telemetryQuickRow}>
             <Text style={[styles.telemetryQuickText, { color: colors.textSecondary }]}>
               {telemetry?.temperature ?? 22}°C • {telemetry?.humidity ?? 88}% RH
@@ -228,8 +288,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 14,
     borderWidth: 1.5,
     marginBottom: 10,
@@ -238,15 +298,58 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
+    gap: 10,
   },
   locationLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    flex: 1,
+  },
+  gpsIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationInfoCol: {
+    flex: 1,
+    gap: 2,
+  },
+  locationTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
   },
   locationText: {
     fontSize: 13,
     fontWeight: '800',
+  },
+  locationCoordsText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
+  liveGpsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    gap: 4,
+  },
+  liveGpsDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  liveGpsText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   telemetryQuickRow: {
     flexDirection: 'row',
