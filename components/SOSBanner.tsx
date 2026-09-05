@@ -4,6 +4,8 @@ import { AlertCircle, ShieldCheck, Siren, PhoneForwarded, Radio } from 'lucide-r
 import { useAppTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
+import { playEmergencySiren, stopEmergencySiren } from '../services/audioAlertService';
+
 interface SOSBannerProps {
   sosStatus: 'none' | 'needs_help' | 'safe';
   onTriggerSOS: () => void;
@@ -28,11 +30,13 @@ export const SOSBanner: React.FC<SOSBannerProps> = ({
   const handleSOSPress = () => {
     onTriggerSOS();
     setBroadcastSent(true);
+    playEmergencySiren(4000);
   };
 
   const handleSafePress = () => {
     onMarkSafe();
     setBroadcastSent(false);
+    stopEmergencySiren();
   };
 
   return (

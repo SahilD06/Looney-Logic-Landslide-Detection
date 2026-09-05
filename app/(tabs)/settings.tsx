@@ -20,6 +20,12 @@ import {
   fetchAllIncidentReports,
   IncidentReportRecord,
 } from '../../services/supabase';
+import { playEmergencySiren } from '../../services/audioAlertService';
+import {
+  requestNotificationPermission,
+  sendLocalDisasterNotification,
+  cacheMountainGisData,
+} from '../../services/notificationService';
 import {
   Sun,
   Moon,
@@ -604,59 +610,125 @@ export default function SettingsScreen() {
             <View style={[styles.cardHeaderIcon, { backgroundColor: colors.subPanel }]}>
               <Sliders size={18} color={colors.steelBlue} />
             </View>
-            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Disaster System Preferences</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Disaster System Preferences</Text>
+              <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
+                PWA Web Audio, Push Notification & Offline Storage Controls
+              </Text>
+            </View>
           </View>
 
+          {/* Emergency Audio Siren */}
           <View style={styles.settingRow}>
             <View style={styles.settingTextCol}>
               <View style={styles.settingTitleRow}>
-                <Volume2 size={15} color={colors.textPrimary} />
+                <Volume2 size={15} color={soundAlerts ? colors.danger : colors.textPrimary} />
                 <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Emergency Audio Siren</Text>
               </View>
               <Text style={[styles.settingDesc, { color: colors.textSecondary }]}>
-                Acoustic alarm when Red Alert landslide threshold is triggered.
+                Web Audio synthesized acoustic alarm when Red Alert landslide threshold is triggered.
               </Text>
+              {soundAlerts && (
+                <TouchableOpacity
+                  style={[styles.testSirenBtn, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}
+                  onPress={() => playEmergencySiren(2000)}
+                  activeOpacity={0.7}
+                >
+                  <Volume2 size={12} color={colors.danger} />
+                  <Text style={[styles.testSirenText, { color: colors.danger }]}>Test Audio Siren (2s)</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <Switch
               value={soundAlerts}
-              onValueChange={setSoundAlerts}
-              trackColor={{ false: colors.border, true: colors.steelBlue }}
+              onValueChange={(val) => {
+                setSoundAlerts(val);
+                if (val) playEmergencySiren(1500);
+              }}
+              trackColor={{ false: colors.border, true: colors.danger }}
               thumbColor="#ffffff"
             />
           </View>
 
+          {/* Push Notifications */}
           <View style={[styles.settingRow, { borderTopColor: colors.borderSoft }]}>
             <View style={styles.settingTextCol}>
               <View style={styles.settingTitleRow}>
-                <Bell size={15} color={colors.textPrimary} />
+                <Bell size={15} color={vibrationAlerts ? colors.steelBlue : colors.textPrimary} />
                 <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Push Notifications</Text>
               </View>
               <Text style={[styles.settingDesc, { color: colors.textSecondary }]}>
-                Real-time IMD / CWC flash advisories and highway clearance updates.
+                Browser Notification API alerts for IMD / CWC flash flood & highway clearance advisories.
               </Text>
+              {vibrationAlerts && (
+                <TouchableOpacity
+                  style={[styles.testSirenBtn, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
+                  onPress={async () => {
+                    const granted = await requestNotificationPermission();
+                    if (granted) {
+                      sendLocalDisasterNotification(
+                        '🛡️ Rakshak Alert System Active',
+                        'Push notifications enabled for live early warnings & highway corridor closures.'
+                      );
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Bell size={12} color={colors.steelBlue} />
+                  <Text style={[styles.testSirenText, { color: colors.steelBlue }]}>Send Test Notification</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <Switch
               value={vibrationAlerts}
-              onValueChange={setVibrationAlerts}
+              onValueChange={async (val) => {
+                setVibrationAlerts(val);
+                if (val) {
+                  const granted = await requestNotificationPermission();
+                  if (granted) {
+                    sendLocalDisasterNotification(
+                      '🚨 Rakshak Disaster Shield Enabled',
+                      'Real-time landslide threshold notifications active.'
+                    );
+                  }
+                }
+              }}
               trackColor={{ false: colors.border, true: colors.steelBlue }}
               thumbColor="#ffffff"
             />
           </View>
 
+          {/* Offline GIS Mountain Caching */}
           <View style={[styles.settingRow, { borderTopColor: colors.borderSoft }]}>
             <View style={styles.settingTextCol}>
               <View style={styles.settingTitleRow}>
-                <WifiOff size={15} color={colors.textPrimary} />
+                <WifiOff size={15} color={offlineCache ? colors.success : colors.textPrimary} />
                 <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Offline GIS Mountain Caching</Text>
               </View>
               <Text style={[styles.settingDesc, { color: colors.textSecondary }]}>
-                Preload offline terrain maps for areas with intermittent connectivity.
+                Preloads offline terrain tiles and cached sensor readings for mountain dead zones.
               </Text>
+              {offlineCache && (
+                <View style={[styles.offlineCacheBadge, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
+                  <CheckCircle2 size={12} color={colors.success} />
+                  <Text style={[styles.offlineCacheText, { color: colors.success }]}>
+                    ✓ Cached: NH-10, NH-6, NH-29 & Shillong offline terrain ready
+                  </Text>
+                </View>
+              )}
             </View>
             <Switch
               value={offlineCache}
-              onValueChange={setOfflineCache}
-              trackColor={{ false: colors.border, true: colors.steelBlue }}
+              onValueChange={(val) => {
+                setOfflineCache(val);
+                if (val) {
+                  cacheMountainGisData({
+                    corridors: ['NH-10', 'NH-6', 'NH-29', 'NH-13'],
+                    offlineMapReady: true,
+                  });
+                }
+              }}
+              trackColor={{ false: colors.border, true: colors.success }}
               thumbColor="#ffffff"
             />
           </View>
@@ -1172,6 +1244,36 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 3,
     lineHeight: 16,
+  },
+  testSirenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  testSirenText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  offlineCacheBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  offlineCacheText: {
+    fontSize: 10.5,
+    fontWeight: '700',
   },
   footerBox: {
     flexDirection: 'row',
