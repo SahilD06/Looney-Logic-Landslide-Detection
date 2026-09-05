@@ -246,7 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       // Direct Google OAuth 2.0 Browser Redirect to accounts.google.com
-      const redirectUri = window.location.origin + window.location.pathname;
+      const redirectUri = window.location.origin;
       const clientId = googleClientId || DEFAULT_GOOGLE_CLIENT_ID;
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
         redirectUri
