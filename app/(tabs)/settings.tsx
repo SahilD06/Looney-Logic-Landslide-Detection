@@ -71,6 +71,7 @@ export default function SettingsScreen() {
   const [soundAlerts, setSoundAlerts] = useState(true);
   const [vibrationAlerts, setVibrationAlerts] = useState(true);
   const [offlineCache, setOfflineCache] = useState(true);
+  const [notifFeedback, setNotifFeedback] = useState('');
 
   // Authentication states
   const [isAuthMode, setIsAuthMode] = useState(false);
@@ -542,47 +543,7 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {/* 4. SUPABASE DATABASE SCHEMA */}
-        <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
-          <View style={styles.cardHeader}>
-            <View style={[styles.cardHeaderIcon, { backgroundColor: colors.subPanel }]}>
-              <Database size={18} color={colors.steelBlue} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Supabase Real-Time Database</Text>
-              <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-                meddqcbnupkmreawagyl.supabase.co
-              </Text>
-            </View>
-            <View style={[styles.dbOnlineBadge, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
-              <View style={[styles.dbOnlineDot, { backgroundColor: colors.success }]} />
-              <Text style={[styles.dbOnlineText, { color: colors.success }]}>Database Connected</Text>
-            </View>
-          </View>
-
-          <View style={[styles.dbInfoBox, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
-            <View style={styles.dbInfoRow}>
-              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>Database Endpoint:</Text>
-              <Text style={[styles.dbInfoValue, { color: colors.textPrimary }]} numberOfLines={1}>
-                https://meddqcbnupkmreawagyl.supabase.co
-              </Text>
-            </View>
-            <View style={styles.dbInfoRow}>
-              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>Auth & Role Table:</Text>
-              <Text style={[styles.dbInfoValue, { color: colors.steelBlue }]}>
-                ✓ `public.app_users` (admin, tester, user)
-              </Text>
-            </View>
-            <View style={styles.dbInfoRow}>
-              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>Incident Database:</Text>
-              <Text style={[styles.dbInfoValue, { color: colors.success }]}>
-                ✓ `public.incident_reports` (Real-Time GPS Sync)
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* 5. Theme Mode Switcher */}
+        {/* 4. Theme Mode Switcher */}
         <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <View style={[styles.cardHeaderIcon, { backgroundColor: colors.subPanel }]}>
@@ -604,7 +565,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* 6. Alert & System Preferences */}
+        {/* 5. Alert & System Preferences */}
         <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <View style={[styles.cardHeaderIcon, { backgroundColor: colors.subPanel }]}>
@@ -658,25 +619,39 @@ export default function SettingsScreen() {
                 <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Push Notifications</Text>
               </View>
               <Text style={[styles.settingDesc, { color: colors.textSecondary }]}>
-                Browser Notification API alerts for IMD / CWC flash flood & highway clearance advisories.
+                Browser Notification alerts for IMD / CWC flash flood & highway clearance advisories.
               </Text>
               {vibrationAlerts && (
-                <TouchableOpacity
-                  style={[styles.testSirenBtn, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
-                  onPress={async () => {
-                    const granted = await requestNotificationPermission();
-                    if (granted) {
-                      sendLocalDisasterNotification(
-                        '🛡️ Rakshak Alert System Active',
-                        'Push notifications enabled for live early warnings & highway corridor closures.'
-                      );
-                    }
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Bell size={12} color={colors.steelBlue} />
-                  <Text style={[styles.testSirenText, { color: colors.steelBlue }]}>Send Test Notification</Text>
-                </TouchableOpacity>
+                <View style={{ marginTop: 6, gap: 6 }}>
+                  <TouchableOpacity
+                    style={[styles.testSirenBtn, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
+                    onPress={async () => {
+                      const perm = await requestNotificationPermission();
+                      if (perm === 'granted') {
+                        const sent = await sendLocalDisasterNotification(
+                          '🛡️ Rakshak Alert System Active',
+                          'Push notifications enabled for live early warnings & highway closures.'
+                        );
+                        setNotifFeedback(sent ? '✓ Notification dispatched to device.' : '✓ Notification audio beep triggered.');
+                      } else if (perm === 'denied') {
+                        setNotifFeedback('⚠️ Notifications blocked. Click the lock icon 🔒 in your browser address bar to allow.');
+                      } else {
+                        setNotifFeedback('ℹ️ Please allow notifications in the browser prompt.');
+                      }
+                      setTimeout(() => setNotifFeedback(''), 5000);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Bell size={12} color={colors.steelBlue} />
+                    <Text style={[styles.testSirenText, { color: colors.steelBlue }]}>Send Test Notification</Text>
+                  </TouchableOpacity>
+
+                  {notifFeedback ? (
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: notifFeedback.includes('⚠️') ? colors.warning : colors.success }}>
+                      {notifFeedback}
+                    </Text>
+                  ) : null}
+                </View>
               )}
             </View>
             <Switch
@@ -684,13 +659,17 @@ export default function SettingsScreen() {
               onValueChange={async (val) => {
                 setVibrationAlerts(val);
                 if (val) {
-                  const granted = await requestNotificationPermission();
-                  if (granted) {
-                    sendLocalDisasterNotification(
+                  const perm = await requestNotificationPermission();
+                  if (perm === 'granted') {
+                    await sendLocalDisasterNotification(
                       '🚨 Rakshak Disaster Shield Enabled',
                       'Real-time landslide threshold notifications active.'
                     );
+                    setNotifFeedback('✓ Notifications enabled!');
+                  } else if (perm === 'denied') {
+                    setNotifFeedback('⚠️ Please click the lock 🔒 icon in address bar to allow notifications.');
                   }
+                  setTimeout(() => setNotifFeedback(''), 5000);
                 }
               }}
               trackColor={{ false: colors.border, true: colors.steelBlue }}

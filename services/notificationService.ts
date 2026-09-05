@@ -1,40 +1,72 @@
-/**
- * Web Notification & Offline Storage Service for PWA
- */
+import { playWarningBeep } from './audioAlertService';
 
-export async function requestNotificationPermission(): Promise<boolean> {
+export async function requestNotificationPermission(): Promise<'granted' | 'denied' | 'default' | 'unsupported'> {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return 'unsupported';
+  }
+
+  if (Notification.permission === 'granted') {
+    return 'granted';
+  }
+
+  try {
+    const perm = await Notification.requestPermission();
+    return perm;
+  } catch {
+    return new Promise((resolve) => {
+      try {
+        Notification.requestPermission((p) => resolve(p));
+      } catch {
+        resolve('denied');
+      }
+    });
+  }
+}
+
+export async function sendLocalDisasterNotification(title: string, body: string): Promise<boolean> {
+  // Always trigger acoustic warning beep
+  playWarningBeep();
+
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return false;
   }
 
-  if (Notification.permission === 'granted') {
-    return true;
-  }
-
-  if (Notification.permission !== 'denied') {
-    const perm = await Notification.requestPermission();
-    return perm === 'granted';
-  }
-
-  return false;
-}
-
-export function sendLocalDisasterNotification(title: string, body: string): void {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
-    return;
-  }
-
-  if (Notification.permission === 'granted') {
-    try {
-      new Notification(title, {
-        body,
-        icon: '/favicon.svg',
-        badge: '/favicon.svg',
-        tag: 'rakshak-disaster-alert',
-      });
-    } catch (e) {
-      console.warn('Notification error:', e);
+  if (Notification.permission !== 'granted') {
+    const perm = await requestNotificationPermission();
+    if (perm !== 'granted') {
+      return false;
     }
+  }
+
+  try {
+    // 1. Try ServiceWorkerRegistration if available (works on Android PWA & Chrome)
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg && typeof (reg as any).showNotification === 'function') {
+        await (reg as any).showNotification(title, {
+          body,
+          tag: 'rakshak-disaster-alert',
+          renotify: true,
+        });
+        return true;
+      }
+    }
+
+    // 2. Standard Web Notification API
+    const notif = new Notification(title, {
+      body,
+      tag: 'rakshak-disaster-alert',
+    });
+
+    notif.onclick = () => {
+      window.focus();
+      notif.close();
+    };
+
+    return true;
+  } catch (e) {
+    console.warn('Notification display note:', e);
+    return false;
   }
 }
 
