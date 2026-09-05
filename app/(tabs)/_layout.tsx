@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-import { Tabs } from 'expo-router';
-import { Home, FileText, Settings } from 'lucide-react-native';
-
-export default function TabLayout() {
-=======
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
@@ -13,20 +7,10 @@ import { useAppTheme } from '../../context/ThemeContext';
 export default function TabLayout() {
   const { colors, isDark } = useAppTheme();
 
->>>>>>> b975479ddc28a837af2451e176af696b66432c34
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-<<<<<<< HEAD
-        tabBarStyle: {
-          backgroundColor: '#13131a',
-          borderTopColor: 'rgba(255,255,255,0.1)',
-        },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#6b7280',
-      }}>
-=======
         tabBarActiveTintColor: colors.steelBlue,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
@@ -48,14 +32,10 @@ export default function TabLayout() {
         },
       }}
     >
->>>>>>> b975479ddc28a837af2451e176af696b66432c34
       <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
-<<<<<<< HEAD
-          tabBarIcon: ({ color }) => <Home color={color} size={24} />,
-=======
           tabBarIcon: ({ color }) => <Activity size={22} color={color} />,
         }}
       />
@@ -64,16 +44,12 @@ export default function TabLayout() {
         options={{
           title: 'Alerts',
           tabBarIcon: ({ color }) => <AlertOctagon size={22} color={color} />,
->>>>>>> b975479ddc28a837af2451e176af696b66432c34
         }}
       />
       <Tabs.Screen
         name="report"
         options={{
           title: 'Report',
-<<<<<<< HEAD
-          tabBarIcon: ({ color }) => <FileText color={color} size={24} />,
-=======
           tabBarIcon: ({ color }) => <Camera size={22} color={color} />,
         }}
       />
@@ -82,16 +58,12 @@ export default function TabLayout() {
         options={{
           title: 'Sensors',
           tabBarIcon: ({ color }) => <Radio size={22} color={color} />,
->>>>>>> b975479ddc28a837af2451e176af696b66432c34
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-<<<<<<< HEAD
-          tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
-=======
           tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
         }}
       />
@@ -99,7 +71,6 @@ export default function TabLayout() {
         name="two"
         options={{
           href: null,
->>>>>>> b975479ddc28a837af2451e176af696b66432c34
         }}
       />
     </Tabs>

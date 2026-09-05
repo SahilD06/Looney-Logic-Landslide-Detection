@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-import React from 'react';
-import { View } from 'react-native';
-import { FieldReportForm } from '../../components/Reporting/FieldReportForm';
-
-export default function ReportScreen() {
-  return (
-    <View className="flex-1 bg-background pt-12">
-      <FieldReportForm />
-    </View>
-  );
-}
-=======
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -1160,4 +1147,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
->>>>>>> b975479ddc28a837af2451e176af696b66432c34

@@ -1,22 +1,3 @@
-<<<<<<< HEAD
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
-
-export default {
-  light: {
-    text: '#000',
-    background: '#fff',
-    tint: tintColorLight,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#fff',
-    background: '#000',
-    tint: tintColorDark,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorDark,
-=======
 // Urban Slate Palette
 export const URBAN_SLATE = {
   lightBg: '#E9E6E7',
@@ -48,6 +29,6 @@ export default {
     tint: URBAN_SLATE.steelBlue,
     tabIconDefault: URBAN_SLATE.slateGray,
     tabIconSelected: URBAN_SLATE.steelBlue,
->>>>>>> b975479ddc28a837af2451e176af696b66432c34
   },
 };
+
