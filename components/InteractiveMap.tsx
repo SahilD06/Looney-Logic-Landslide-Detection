@@ -14,10 +14,10 @@ type FilterType = 'all' | 'sensors' | 'zones' | 'history' | 'nasa';
 type BasemapType = 'topo' | 'satellite' | 'street' | 'slate';
 
 const BASEMAP_URLS = {
-  topo: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  topo: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  street: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  slate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  street: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  slate: 'https://cartodb-basemaps-a.global.ssl.fastly.net/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 };
 
 const REGIONS = [
@@ -41,10 +41,20 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const tileLayerRef = useRef<any>(null);
   const layerGroupRef = useRef<any>(null);
 
-  // Load Leaflet Script dynamically if on web
+  // Load Leaflet CSS & Script dynamically if on web
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
+    // 1. Inject Leaflet CSS
+    if (!document.getElementById('leaflet-css-cdn')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css-cdn';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+
+    // 2. Inject Leaflet JS
     const loadLeaflet = () => {
       const win = window as any;
       if (win.L) {
@@ -105,9 +115,13 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
     renderMapFeatures(map, layerGroupRef.current, activeFilter);
 
+    // Re-invalidate size multiple times to ensure full container measurement
     setTimeout(() => {
       map.invalidateSize();
-    }, 250);
+    }, 150);
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 500);
 
     return () => {
       if (mapInstanceRef.current) {
