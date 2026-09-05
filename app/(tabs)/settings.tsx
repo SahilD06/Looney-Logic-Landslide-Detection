@@ -167,7 +167,6 @@ export default function SettingsScreen() {
                 style={[styles.googleSignInBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
                 onPress={async () => {
                   await signInWithGoogle();
-                  setIsAuthMode(false);
                 }}
                 disabled={isLoading}
                 activeOpacity={0.85}

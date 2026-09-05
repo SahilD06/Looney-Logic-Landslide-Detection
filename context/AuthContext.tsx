@@ -60,6 +60,8 @@ const DEFAULT_PRESET_USERS: Record<UserRole, AppUser> = {
   },
 };
 
+const STORAGE_KEY = 'rakshak_auth_user';
+
 interface AuthContextType {
   user: AppUser | null;
   currentRole: UserRole;
@@ -75,9 +77,9 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: DEFAULT_PRESET_USERS.user,
+  user: null,
   currentRole: 'user',
-  isAuthenticated: true,
+  isAuthenticated: false,
   isLoading: false,
   signInWithGoogle: async () => {},
   loginAsRole: async () => {},
@@ -92,22 +94,82 @@ export const DEFAULT_GOOGLE_CLIENT_ID =
   '758692905104-ro5c26nh59321ro51gavdmjgc9fj5vrg.apps.googleusercontent.com';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AppUser | null>(DEFAULT_PRESET_USERS.user);
+  const [user, setUser] = useState<AppUser | null>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return null;
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [googleClientId, setGoogleClientIdState] = useState<string>(
     process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID
   );
 
-  // Sync initial user with Supabase
-  useEffect(() => {
-    if (user) {
-      syncUserProfile({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        photoUrl: user.photoUrl,
+  const saveUserSession = (newUser: AppUser | null) => {
+    setUser(newUser);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      if (newUser) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+      } else {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+  };
+
+  // Helper to fetch user info with access token and set as Citizen User
+  const fetchGoogleUser = async (accessToken: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
+      const data = await res.json();
+      if (data.email) {
+        const newUser: AppUser = {
+          id: data.sub || `g-${Date.now()}`,
+          name: data.name || data.email.split('@')[0],
+          email: data.email,
+          photoUrl: data.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+          givenName: data.given_name,
+          role: 'user', // All Google logins get citizen user role by default
+          roleTitle: 'Citizen Responder',
+        };
+        saveUserSession(newUser);
+        await syncUserProfile({
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          photoUrl: newUser.photoUrl,
+        });
+      }
+    } catch (e) {
+      console.error('Failed to fetch Google profile:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check for redirect access_token from Google OAuth callback in URL hash
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    if (window.location.hash && window.location.hash.includes('access_token')) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const token = params.get('access_token');
+      if (token) {
+        fetchGoogleUser(token);
+        // Clean URL hash without triggering a full page reload
+        window.history.replaceState(null, '', window.location.pathname);
+      }
     }
   }, []);
 
@@ -126,7 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: u.role,
         roleTitle: ROLE_CONFIGS[u.role].title,
       };
-      setUser(appUser);
+      saveUserSession(appUser);
       return { success: true };
     }
 
@@ -148,7 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: 'user',
         roleTitle: ROLE_CONFIGS.user.title,
       };
-      setUser(appUser);
+      saveUserSession(appUser);
       return { success: true };
     }
 
@@ -158,7 +220,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginAsRole = async (role: UserRole) => {
     setIsLoading(true);
     const selectedUser = DEFAULT_PRESET_USERS[role];
-    setUser(selectedUser);
+    saveUserSession(selectedUser);
 
     try {
       await syncUserProfile({
@@ -182,58 +244,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     setIsLoading(true);
 
-    if (Platform.OS === 'web' && (window as any).google?.accounts?.oauth2 && googleClientId) {
-      try {
-        const client = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
-          callback: async (response: any) => {
-            if (response.access_token) {
-              try {
-                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${response.access_token}` },
-                });
-                const data = await res.json();
-                const newUser: AppUser = {
-                  id: data.sub || `g-${Date.now()}`,
-                  name: data.name || 'Disaster Response Officer',
-                  email: data.email || 'officer@rakshak-ner.gov.in',
-                  photoUrl: data.picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-                  givenName: data.given_name,
-                  role: 'user',
-                  roleTitle: 'Certified Field Responder',
-                };
-                setUser(newUser);
-                await syncUserProfile({
-                  id: newUser.id,
-                  email: newUser.email,
-                  name: newUser.name,
-                  role: newUser.role,
-                  photoUrl: newUser.photoUrl,
-                });
-              } catch (e) {
-                console.error('Failed to fetch user info from Google:', e);
-              }
-            }
-            setIsLoading(false);
-          },
-        });
-        client.requestAccessToken();
-        return;
-      } catch (err) {
-        console.warn('Google GSI OAuth error, falling back to verified demo profile:', err);
-      }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Direct Google OAuth 2.0 Browser Redirect to accounts.google.com
+      const redirectUri = window.location.origin + window.location.pathname;
+      const clientId = googleClientId || DEFAULT_GOOGLE_CLIENT_ID;
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+        redirectUri
+      )}&response_type=token&scope=openid%20email%20profile&prompt=select_account`;
+
+      // Redirect the entire browser window to Google OAuth page
+      window.location.href = googleAuthUrl;
+      return;
     }
 
-    // Default fast login as Admin/User
-    setTimeout(() => {
-      loginAsRole('admin');
-      setIsLoading(false);
-    }, 400);
+    setIsLoading(false);
   };
 
   const signOut = () => {
-    setUser(null);
+    saveUserSession(null);
   };
 
   const currentRole: UserRole = user?.role || 'user';
