@@ -67,9 +67,9 @@ export async function authenticateUserFromDatabase(
         user: {
           id: data.id,
           email: data.email || `${u}@rakshak.in`,
-          name: data.name || u,
+          name: u,
           role: (['admin', 'tester', 'user'].includes(data.role) ? data.role : 'user') as UserRole,
-          photoUrl: data.photo_url || (data.role === 'admin' ? 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80' : data.role === 'tester' ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'),
+          photoUrl: '',
           createdAt: data.created_at,
         },
       };
@@ -84,10 +84,10 @@ export async function authenticateUserFromDatabase(
       success: true,
       user: {
         id: 'usr-adm-01',
-        name: 'Major Vikram Sen (NDRF Command)',
+        name: 'admin',
         email: 'admin@rakshak-ner.gov.in',
         role: 'admin',
-        photoUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
+        photoUrl: '',
       },
     };
   }
@@ -97,10 +97,10 @@ export async function authenticateUserFromDatabase(
       success: true,
       user: {
         id: 'usr-tst-01',
-        name: 'Dev QA Simulation Lead',
+        name: 'tester',
         email: 'tester@rakshak-ner.dev',
         role: 'tester',
-        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        photoUrl: '',
       },
     };
   }
@@ -110,10 +110,10 @@ export async function authenticateUserFromDatabase(
       success: true,
       user: {
         id: 'usr-cit-01',
-        name: 'Aarav Sharma (Citizen)',
-        email: 'aarav.sharma@gmail.com',
+        name: 'user',
+        email: 'user@rakshak-ner.in',
         role: 'user',
-        photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        photoUrl: '',
       },
     };
   }

@@ -64,28 +64,28 @@ VALUES
         'usr-adm-01',
         'admin',
         'admin',
-        'Major Vikram Sen (NDRF Command)',
+        'admin',
         'admin@rakshak-ner.gov.in',
         'admin',
-        'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80'
+        ''
     ),
     (
         'usr-tst-01',
         'tester',
         'tester',
-        'Dev QA Simulation Lead',
+        'tester',
         'tester@rakshak-ner.dev',
         'tester',
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+        ''
     ),
     (
         'usr-cit-01',
         'user',
         'user',
-        'Aarav Sharma (Citizen)',
-        'aarav.sharma@gmail.com',
         'user',
-        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+        'user@rakshak-ner.in',
+        'user',
+        ''
     )
 ON CONFLICT (username) DO UPDATE SET
     password = EXCLUDED.password,
