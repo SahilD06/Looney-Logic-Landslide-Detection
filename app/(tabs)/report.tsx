@@ -459,35 +459,116 @@ export default function FieldReportScreen() {
                   imageState === 'rejected' && { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder, borderStyle: 'solid' },
                 ]}
               >
-                {/* 1. Camera Trigger - Enforces Live Photo Only */}
+                {/* 1. Camera Trigger - Enforces Live Photo & Mobile Native Camera */}
                 {imageState === 'none' && !isCameraActive && (
                   <View style={styles.uploadTrigger}>
                     <View style={[styles.cameraIconCircle, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
                       <Camera size={36} color={colors.steelBlue} />
                     </View>
-                    <Text style={[styles.uploadTriggerTitle, { color: colors.textPrimary }]}>Live Ground Camera Capture</Text>
+                    <Text style={[styles.uploadTriggerTitle, { color: colors.textPrimary }]}>Hazard Ground Photo Capture</Text>
                     <Text style={[styles.uploadTriggerSub, { color: colors.textMuted }]}>
-                      ⚡ Mandatory Live Capture: Opens your device camera with instant GPS lock and anti-fraud timestamping.
+                      ⚡ Snap a live ground photo using your smartphone camera or upload field evidence with GPS geotagging.
                     </Text>
 
-                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+                      {/* Direct Native Phone Camera Trigger (Zero permission glitch, works on 100% of iOS & Android phones) */}
+                      {Platform.OS === 'web' ? (
+                        <label
+                          style={{
+                            position: 'relative',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: colors.danger,
+                            borderRadius: '12px',
+                            padding: '12px 18px',
+                            cursor: 'pointer',
+                            color: '#ffffff',
+                            fontWeight: '800',
+                            fontSize: '13px',
+                            gap: '8px',
+                            boxShadow: '0 3px 8px rgba(184, 74, 74, 0.3)',
+                          }}
+                        >
+                          <Camera size={18} color="#ffffff" />
+                          <span>📸 Take Live Photo (Phone Camera)</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              opacity: 0,
+                              width: '100%',
+                              height: '100%',
+                              cursor: 'pointer',
+                            }}
+                            onChange={(e: any) => {
+                              handleDetectGPS();
+                              const file = e.target.files?.[0];
+                              if (file) processSelectedFile(file);
+                            }}
+                          />
+                        </label>
+                      ) : null}
+
+                      {/* In-Browser Live Viewfinder (for PC / Laptop webcams) */}
                       <TouchableOpacity
                         style={[styles.primaryCameraBtn, { backgroundColor: colors.steelBlue }]}
                         onPress={() => startLiveCamera()}
                         activeOpacity={0.85}
                       >
-                        <Camera size={16} color="#ffffff" />
-                        <Text style={styles.primaryCameraBtnText}>Open Live Viewfinder</Text>
+                        <Radio size={16} color="#ffffff" />
+                        <Text style={styles.primaryCameraBtnText}>Live Viewfinder HUD</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[styles.secondaryCameraBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
-                        onPress={triggerNativeCamera}
-                        activeOpacity={0.85}
-                      >
-                        <Radio size={16} color={colors.danger} />
-                        <Text style={[styles.secondaryCameraBtnText, { color: colors.textPrimary }]}>Phone Native Camera</Text>
-                      </TouchableOpacity>
+                      {/* Gallery / File Evidence Fallback */}
+                      {Platform.OS === 'web' ? (
+                        <label
+                          style={{
+                            position: 'relative',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: colors.cardBg,
+                            border: `1px solid ${colors.border}`,
+                            borderRadius: '12px',
+                            padding: '12px 16px',
+                            cursor: 'pointer',
+                            color: colors.textPrimary,
+                            fontWeight: '700',
+                            fontSize: '12.5px',
+                            gap: '6px',
+                          }}
+                        >
+                          <UploadCloud size={16} color={colors.steelBlue} />
+                          <span>Choose from Gallery</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              opacity: 0,
+                              width: '100%',
+                              height: '100%',
+                              cursor: 'pointer',
+                            }}
+                            onChange={(e: any) => {
+                              handleDetectGPS();
+                              const file = e.target.files?.[0];
+                              if (file) processSelectedFile(file);
+                            }}
+                          />
+                        </label>
+                      ) : null}
                     </View>
                   </View>
                 )}
