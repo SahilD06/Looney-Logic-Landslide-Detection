@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0a0a0f;
+  --color-surface: #13131a;
+  --color-primary: #3b82f6;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-success: #10b981;
+  --font-sans: 'Inter', sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: #f3f4f6;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@utility glass-panel {
+  background-color: rgb(19 19 26 / 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Leaflet Map Overrides for Dark Theme integration */
+.leaflet-container {
+  background-color: #13131a !important;
+}
+.leaflet-control-zoom a {
+  background-color: #1a1a24 !important;
+  color: #e5e7eb !important;
+  border-color: #374151 !important;
+}
+.leaflet-control-zoom a:hover {
+  background-color: #272733 !important;
+}
