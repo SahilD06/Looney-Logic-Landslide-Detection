@@ -11,7 +11,7 @@ interface HeaderProps {
   isLive?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onRefresh, isLive = true }) => {
+export const Header: React.FC<HeaderProps> = ({ onRefresh }) => {
   const { colors, isDark } = useAppTheme();
   const { user, isAuthenticated, currentRole } = useAuth();
   const router = useRouter();
@@ -35,12 +35,6 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isLive = true }) => {
       </View>
 
       <View style={styles.actionRow}>
-        {/* Live Indicator - Compact */}
-        <View style={[styles.liveBadge, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
-          <View style={[styles.pulsingDot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.liveText, { color: colors.success }]}>LIVE</Text>
-        </View>
-
         {/* Uiverse Theme Switcher */}
         <ThemeToggleSwitch scale={0.82} />
 
@@ -145,25 +139,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexShrink: 0,
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 14,
-    gap: 4,
-  },
-  pulsingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  liveText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
   },
   iconButton: {
     width: 38,

@@ -107,7 +107,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={StyleSheet.flatten([styles.container, { backgroundColor: colors.bg }])}>
-      <Header onRefresh={onRefresh} isLive={true} />
+      <Header onRefresh={onRefresh} />
 
       <ScrollView
         style={styles.scrollView}

@@ -11,13 +11,12 @@ interface InteractiveMapProps {
 }
 
 type FilterType = 'all' | 'sensors' | 'zones' | 'history' | 'nasa';
-type BasemapType = 'topo' | 'satellite' | 'street' | 'slate';
+type BasemapType = 'topo' | 'satellite' | 'street';
 
 const BASEMAP_URLS = {
   topo: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   street: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  slate: 'https://cartodb-basemaps-a.global.ssl.fastly.net/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 };
 
 const REGIONS = [
@@ -315,14 +314,14 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
           {/* Basemap Toggle Buttons */}
           <View style={[styles.basemapToggleRow, { backgroundColor: colors.borderSoft, borderColor: colors.border }]}>
-            {(['topo', 'satellite', 'street', 'slate'] as BasemapType[]).map((type) => (
+            {(['topo', 'satellite', 'street'] as BasemapType[]).map((type) => (
               <TouchableOpacity
                 key={type}
                 style={[styles.basemapBtn, basemap === type && { backgroundColor: colors.steelBlue }]}
                 onPress={() => setBasemap(type)}
               >
                 <Text style={[styles.basemapBtnText, { color: basemap === type ? '#ffffff' : colors.textSecondary }]}>
-                  {type === 'topo' ? 'Topo' : type === 'satellite' ? 'Satellite' : type === 'street' ? 'Street' : 'Slate'}
+                  {type === 'topo' ? 'Topo' : type === 'satellite' ? 'Satellite' : 'Street'}
                 </Text>
               </TouchableOpacity>
             ))}
