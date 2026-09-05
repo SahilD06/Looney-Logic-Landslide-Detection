@@ -44,11 +44,13 @@ import {
   MapPin,
   RefreshCw,
   AlertTriangle,
-  Send,
+  Lock,
+  ArrowRight,
+  UserCheck,
 } from 'lucide-react-native';
 
 export default function SettingsScreen() {
-  const { theme, colors, isDark, setTheme } = useAppTheme();
+  const { theme, colors, isDark } = useAppTheme();
   const {
     user,
     currentRole,
@@ -58,18 +60,14 @@ export default function SettingsScreen() {
     loginWithCredentials,
     signInWithGoogle,
     signOut,
-    googleClientId,
-    setGoogleClientId,
   } = useAuth();
 
   const [soundAlerts, setSoundAlerts] = useState(true);
   const [vibrationAlerts, setVibrationAlerts] = useState(true);
   const [offlineCache, setOfflineCache] = useState(true);
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  const [clientIdInput, setClientIdInput] = useState(googleClientId);
-  const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Credential login state
+  // Authentication states
+  const [isAuthMode, setIsAuthMode] = useState(false);
   const [loginUsername, setLoginUsername] = useState('admin');
   const [loginPassword, setLoginPassword] = useState('admin');
   const [authMessage, setAuthMessage] = useState('');
@@ -82,7 +80,6 @@ export default function SettingsScreen() {
   // Tester simulation states
   const [simDanger, setSimDanger] = useState(false);
   const [simRainfall, setSimRainfall] = useState(78);
-  const [simPorePressure, setSimPorePressure] = useState(145);
 
   useEffect(() => {
     if (currentRole === 'admin') {
@@ -107,16 +104,13 @@ export default function SettingsScreen() {
     const res = await loginWithCredentials(loginUsername, loginPassword);
     if (res.success) {
       setAuthMessage('✓ Success! Logged in with assigned role permissions.');
-      setTimeout(() => setAuthMessage(''), 3000);
+      setTimeout(() => {
+        setAuthMessage('');
+        setIsAuthMode(false);
+      }, 800);
     } else {
       setAuthMessage(res.message || 'Invalid credentials');
     }
-  };
-
-  const handleSaveClientId = () => {
-    setGoogleClientId(clientIdInput.trim());
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
   };
 
   return (
@@ -126,33 +120,182 @@ export default function SettingsScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Screen Title */}
         <View style={styles.headerInfo}>
-          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>System Settings & Account</Text>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>
+            {currentRole === 'admin'
+              ? '🛡️ Admin Command Center'
+              : currentRole === 'tester'
+              ? '🧪 QA Tester Dashboard'
+              : 'Citizen Settings & Profile'}
+          </Text>
           <Text style={[styles.screenDesc, { color: colors.textSecondary }]}>
-            Switch role privileges, view Supabase incident records, configure sirens, and manage authentication.
+            {currentRole === 'admin'
+              ? 'Real-time database incident feed, NDRF dispatch control, and system health.'
+              : currentRole === 'tester'
+              ? 'Simulate risk alarms, rainfall thresholds, and telemetry test controls.'
+              : 'Manage siren alerts, app appearance, and citizen authentication.'}
           </Text>
         </View>
 
-        {/* 1. Account & 3-Tier Role Login Switcher */}
-        <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
-          <View style={styles.cardHeader}>
-            <View style={[styles.cardHeaderIcon, { backgroundColor: colors.subPanel }]}>
-              <User size={18} color={colors.steelBlue} />
+        {/* 1. AUTHENTICATION SECTION */}
+        {(!isAuthenticated || isAuthMode) ? (
+          /* LOGIN SCREEN */
+          <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardHeaderIcon, { backgroundColor: colors.subPanel }]}>
+                <Lock size={18} color={colors.steelBlue} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Sign In to Rakshak NER</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
+                  Log in with Google or enter role-assigned credentials
+                </Text>
+              </View>
+              {isAuthenticated && (
+                <TouchableOpacity
+                  style={[styles.cancelAuthBtn, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
+                  onPress={() => setIsAuthMode(false)}
+                >
+                  <Text style={[styles.cancelAuthText, { color: colors.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Account & Role Authentication</Text>
-              <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-                Select login identity ({ROLE_CONFIGS[currentRole].title})
+
+            {/* OPTION 1: GOOGLE LOGIN */}
+            <View style={styles.authOptionBox}>
+              <Text style={[styles.authOptionTitle, { color: colors.textPrimary }]}>1. Quick Google Login</Text>
+              <TouchableOpacity
+                style={[styles.googleSignInBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
+                onPress={async () => {
+                  await signInWithGoogle();
+                  setIsAuthMode(false);
+                }}
+                disabled={isLoading}
+                activeOpacity={0.85}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={colors.steelBlue} />
+                ) : (
+                  <>
+                    <View style={styles.googleIconContainer}>
+                      <Text style={styles.googleLetter}>G</Text>
+                    </View>
+                    <Text style={[styles.googleSignInText, { color: colors.textPrimary }]}>
+                      Continue with Google Account
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* DIVIDER */}
+            <View style={styles.dividerContainer}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textMuted, backgroundColor: colors.cardBg }]}>
+                OR SIGN IN WITH USERNAME & PASSWORD
               </Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            {/* OPTION 2: USERNAME & PASSWORD CREDENTIALS */}
+            <View style={styles.authOptionBox}>
+              <Text style={[styles.authOptionTitle, { color: colors.textPrimary }]}>
+                2. Role-Assigned Database Login
+              </Text>
+              <Text style={[styles.authOptionDesc, { color: colors.textSecondary }]}>
+                Logging in with <Text style={{ fontWeight: 'bold' }}>admin</Text> grants the Admin Command Center. Logging in with <Text style={{ fontWeight: 'bold' }}>tester</Text> grants the QA Tester Suite.
+              </Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Username</Text>
+                <TextInput
+                  style={[styles.inputBox, { backgroundColor: colors.subPanel, color: colors.textPrimary, borderColor: colors.border }]}
+                  placeholder="admin, tester, or user"
+                  placeholderTextColor={colors.textMuted}
+                  value={loginUsername}
+                  onChangeText={setLoginUsername}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Password</Text>
+                <TextInput
+                  style={[styles.inputBox, { backgroundColor: colors.subPanel, color: colors.textPrimary, borderColor: colors.border }]}
+                  placeholder="Enter password"
+                  placeholderTextColor={colors.textMuted}
+                  value={loginPassword}
+                  onChangeText={setLoginPassword}
+                  secureTextEntry
+                />
+              </View>
+
+              {authMessage ? (
+                <Text style={[styles.authMessageText, { color: authMessage.includes('Success') ? colors.success : colors.danger }]}>
+                  {authMessage}
+                </Text>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.primarySignInBtn, { backgroundColor: colors.steelBlue }]}
+                onPress={handleCredentialLogin}
+                disabled={isLoading}
+                activeOpacity={0.85}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Text style={styles.primarySignInText}>Sign In</Text>
+                    <ArrowRight size={16} color="#ffffff" />
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Quick Fill Presets */}
+              <View style={styles.quickFillBox}>
+                <Text style={[styles.quickFillLabel, { color: colors.textMuted }]}>Quick Fill Test Credentials:</Text>
+                <View style={styles.quickFillRow}>
+                  <TouchableOpacity
+                    style={[styles.quickFillChip, { backgroundColor: colors.subPanel, borderColor: colors.dangerBorder }]}
+                    onPress={() => {
+                      setLoginUsername('admin');
+                      setLoginPassword('admin');
+                    }}
+                  >
+                    <Text style={[styles.quickFillChipText, { color: colors.danger }]}>🛡️ admin / admin</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.quickFillChip, { backgroundColor: colors.subPanel, borderColor: colors.warningBorder }]}
+                    onPress={() => {
+                      setLoginUsername('tester');
+                      setLoginPassword('tester');
+                    }}
+                  >
+                    <Text style={[styles.quickFillChipText, { color: colors.warning }]}>🧪 tester / tester</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.quickFillChip, { backgroundColor: colors.subPanel, borderColor: colors.successBorder }]}
+                    onPress={() => {
+                      setLoginUsername('user');
+                      setLoginPassword('user');
+                    }}
+                  >
+                    <Text style={[styles.quickFillChipText, { color: colors.success }]}>👤 user / user</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           </View>
-
-          {/* Active Profile Header */}
-          {isAuthenticated && user && (
-            <View style={[styles.profileBox, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
-              <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
-              <View style={styles.profileDetails}>
-                <View style={styles.nameRow}>
-                  <Text style={[styles.profileName, { color: colors.textPrimary }]}>{user.name}</Text>
+        ) : (
+          /* SIGNED IN USER PROFILE CARD */
+          <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+            <View style={styles.profileRow}>
+              <Image source={{ uri: user?.photoUrl }} style={styles.avatar} />
+              <View style={styles.profileInfoCol}>
+                <View style={styles.profileNameRow}>
+                  <Text style={[styles.profileName, { color: colors.textPrimary }]}>{user?.name}</Text>
                   <View
                     style={[
                       styles.roleBadge,
@@ -177,213 +320,34 @@ export default function SettingsScreen() {
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{user.email}</Text>
-                <Text style={[styles.profileRole, { color: colors.textMuted }]}>{user.roleTitle}</Text>
+                <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{user?.email}</Text>
+                <Text style={[styles.profileRoleTitle, { color: colors.textMuted }]}>{user?.roleTitle}</Text>
               </View>
 
-              <TouchableOpacity
-                style={[styles.logoutBtn, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}
-                onPress={signOut}
-                activeOpacity={0.8}
-              >
-                <LogOut size={15} color={colors.danger} />
-                <Text style={[styles.logoutText, { color: colors.danger }]}>Sign Out</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Direct Credential Login Form */}
-          <View style={[styles.credentialLoginCard, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
-            <Text style={[styles.credentialLoginTitle, { color: colors.textPrimary }]}>
-              Database Login with Assigned Role
-            </Text>
-            <Text style={[styles.credentialLoginSub, { color: colors.textSecondary }]}>
-              Enter credentials stored in Supabase `app_users` table. Role permissions (`admin`, `tester`, `user`) are automatically enforced based on your account.
-            </Text>
-
-            <View style={styles.inputFieldGroup}>
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Username</Text>
-              <TextInput
-                style={[styles.credentialInput, { backgroundColor: colors.cardBg, color: colors.textPrimary, borderColor: colors.border }]}
-                placeholder="admin, tester, or custom username"
-                placeholderTextColor={colors.textMuted}
-                value={loginUsername}
-                onChangeText={setLoginUsername}
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={styles.inputFieldGroup}>
-              <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Password</Text>
-              <TextInput
-                style={[styles.credentialInput, { backgroundColor: colors.cardBg, color: colors.textPrimary, borderColor: colors.border }]}
-                placeholder="Enter password"
-                placeholderTextColor={colors.textMuted}
-                value={loginPassword}
-                onChangeText={setLoginPassword}
-                secureTextEntry
-              />
-            </View>
-
-            {authMessage ? (
-              <Text style={[styles.authMessageText, { color: authMessage.includes('Success') ? colors.success : colors.danger }]}>
-                {authMessage}
-              </Text>
-            ) : null}
-
-            <View style={styles.loginActionRow}>
-              <TouchableOpacity
-                style={[styles.loginSubmitBtn, { backgroundColor: colors.steelBlue }]}
-                onPress={handleCredentialLogin}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text style={styles.loginSubmitText}>Sign In & Load Role</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Quick Fill Preset Badges */}
-            <View style={styles.quickFillContainer}>
-              <Text style={[styles.quickFillLabel, { color: colors.textMuted }]}>Quick Fill Credentials:</Text>
-              <View style={styles.quickFillBadgesRow}>
+              <View style={styles.profileActions}>
                 <TouchableOpacity
-                  style={[styles.quickFillBadge, { backgroundColor: colors.cardBg, borderColor: colors.dangerBorder }]}
-                  onPress={() => {
-                    setLoginUsername('admin');
-                    setLoginPassword('admin');
-                  }}
+                  style={[styles.switchAccountBtn, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
+                  onPress={() => setIsAuthMode(true)}
+                  activeOpacity={0.8}
                 >
-                  <Text style={[styles.quickFillBadgeText, { color: colors.danger }]}>🛡️ admin / admin</Text>
+                  <RefreshCw size={13} color={colors.steelBlue} />
+                  <Text style={[styles.switchAccountText, { color: colors.steelBlue }]}>Switch Login</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.quickFillBadge, { backgroundColor: colors.cardBg, borderColor: colors.warningBorder }]}
-                  onPress={() => {
-                    setLoginUsername('tester');
-                    setLoginPassword('tester');
-                  }}
+                  style={[styles.signOutBtn, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}
+                  onPress={() => signOut()}
+                  activeOpacity={0.8}
                 >
-                  <Text style={[styles.quickFillBadgeText, { color: colors.warning }]}>🧪 tester / tester</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.quickFillBadge, { backgroundColor: colors.cardBg, borderColor: colors.successBorder }]}
-                  onPress={() => {
-                    setLoginUsername('user');
-                    setLoginPassword('user');
-                  }}
-                >
-                  <Text style={[styles.quickFillBadgeText, { color: colors.success }]}>👤 user / user</Text>
+                  <LogOut size={13} color={colors.danger} />
+                  <Text style={[styles.signOutText, { color: colors.danger }]}>Sign Out</Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
-        </View>
+        )}
 
-        {/* 2. Supabase Database Connection Status & SQL Schema Generator */}
-        <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
-          <View style={styles.cardHeader}>
-            <View style={[styles.cardHeaderIcon, { backgroundColor: colors.subPanel }]}>
-              <Database size={18} color={colors.steelBlue} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Supabase Database & Tables</Text>
-              <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-                meddqcbnupkmreawagyl.supabase.co
-              </Text>
-            </View>
-            <View style={[styles.dbOnlineBadge, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
-              <View style={[styles.dbOnlineDot, { backgroundColor: colors.success }]} />
-              <Text style={[styles.dbOnlineText, { color: colors.success }]}>Database Connected</Text>
-            </View>
-          </View>
-
-          <View style={[styles.dbInfoBox, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
-            <View style={styles.dbInfoRow}>
-              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>Database Endpoint:</Text>
-              <Text style={[styles.dbInfoValue, { color: colors.textPrimary }]} numberOfLines={1}>
-                https://meddqcbnupkmreawagyl.supabase.co
-              </Text>
-            </View>
-            <View style={styles.dbInfoRow}>
-              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>User & Role Table:</Text>
-              <Text style={[styles.dbInfoValue, { color: colors.steelBlue }]}>
-                ✓ `public.app_users` (admin, tester, user)
-              </Text>
-            </View>
-            <View style={styles.dbInfoRow}>
-              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>Incident Database:</Text>
-              <Text style={[styles.dbInfoValue, { color: colors.success }]}>
-                ✓ `public.incident_reports` (Real-Time GPS Sync)
-              </Text>
-            </View>
-          </View>
-
-          {/* SQL Code Instructions Card */}
-          <View style={[styles.sqlHelperCard, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
-            <View style={styles.sqlHeaderRow}>
-              <Text style={[styles.sqlHeaderTitle, { color: colors.textPrimary }]}>
-                📄 Supabase SQL Setup Script
-              </Text>
-              <TouchableOpacity
-                style={[styles.copySqlBtn, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: colors.border }]}
-                onPress={() => {
-                  if (Platform.OS === 'web' && navigator.clipboard) {
-                    navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS public.app_users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    name TEXT NOT NULL,
-    email TEXT,
-    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'tester')),
-    photo_url TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.incident_reports (
-    id TEXT PRIMARY KEY,
-    incident_type TEXT NOT NULL,
-    severity TEXT NOT NULL,
-    latitude NUMERIC NOT NULL,
-    longitude NUMERIC NOT NULL,
-    location_name TEXT,
-    reported_by TEXT NOT NULL,
-    reporter_email TEXT,
-    reporter_role TEXT DEFAULT 'user',
-    remarks TEXT,
-    image_url TEXT,
-    hazard_confidence NUMERIC,
-    is_authentic BOOLEAN DEFAULT true,
-    status TEXT DEFAULT 'PENDING_REVIEW',
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
-INSERT INTO public.app_users (id, username, password, name, email, role)
-VALUES
-    ('usr-adm-01', 'admin', 'admin', 'Major Vikram Sen (NDRF Command)', 'admin@rakshak-ner.gov.in', 'admin'),
-    ('usr-tst-01', 'tester', 'tester', 'Dev QA Simulation Lead', 'tester@rakshak-ner.dev', 'tester'),
-    ('usr-cit-01', 'user', 'user', 'Aarav Sharma (Citizen)', 'aarav.sharma@gmail.com', 'user')
-ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUDED.role;`);
-                    setSqlCopied(true);
-                    setTimeout(() => setSqlCopied(false), 3000);
-                  }
-                }}
-              >
-                <Text style={[styles.copySqlText, { color: colors.steelBlue }]}>
-                  {sqlCopied ? '✓ Copied SQL!' : 'Copy SQL Schema'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={[styles.sqlSubText, { color: colors.textSecondary }]}>
-              Copy & paste the schema directly into your <Text style={{ fontWeight: 'bold' }}>Supabase Dashboard &gt; SQL Editor &gt; Run</Text> to automatically generate the tables and assign the credentials.
-            </Text>
-          </View>
-        </View>
-
-        {/* 3. ADMIN INCIDENT COMMAND CENTER (Visible only to Admin) */}
+        {/* 2. ADMIN DASHBOARD & INCIDENT COMMAND CENTER (Only when logged in as admin) */}
         {currentRole === 'admin' && (
           <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.dangerBorder }]}>
             <View style={styles.cardHeader}>
@@ -391,9 +355,9 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
                 <ShieldAlert size={18} color={colors.danger} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: colors.danger }]}>🛡️ Admin Incident Command Center</Text>
+                <Text style={[styles.cardTitle, { color: colors.danger }]}>NDRF Incident Command Center</Text>
                 <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-                  Live reports submitted to Supabase Database
+                  Live database reports ({adminReports.length} incidents logged)
                 </Text>
               </View>
               <TouchableOpacity
@@ -406,12 +370,30 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
                 ) : (
                   <>
                     <RefreshCw size={13} color={colors.steelBlue} />
-                    <Text style={[styles.refreshText, { color: colors.steelBlue }]}>Refresh</Text>
+                    <Text style={[styles.refreshText, { color: colors.steelBlue }]}>Refresh Feed</Text>
                   </>
                 )}
               </TouchableOpacity>
             </View>
 
+            {/* Admin Stats Row */}
+            <View style={styles.adminStatsRow}>
+              <View style={[styles.adminStatCard, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
+                <Text style={[styles.adminStatVal, { color: colors.danger }]}>2</Text>
+                <Text style={[styles.adminStatLabel, { color: colors.textMuted }]}>Active Hazards</Text>
+              </View>
+              <View style={[styles.adminStatCard, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
+                <Text style={[styles.adminStatVal, { color: colors.steelBlue }]}>NH-10</Text>
+                <Text style={[styles.adminStatLabel, { color: colors.textMuted }]}>Critical Corridor</Text>
+              </View>
+              <View style={[styles.adminStatCard, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
+                <Text style={[styles.adminStatVal, { color: colors.success }]}>1078</Text>
+                <Text style={[styles.adminStatLabel, { color: colors.textMuted }]}>NDRF Hotline</Text>
+              </View>
+            </View>
+
+            {/* Database Reports List */}
+            <Text style={[styles.sectionSubtitle, { color: colors.textPrimary }]}>Live Database Incident Submissions:</Text>
             {adminReports.length === 0 ? (
               <View style={styles.emptyReportsBox}>
                 <FileCheck size={28} color={colors.textMuted} />
@@ -469,7 +451,7 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
           </View>
         )}
 
-        {/* 4. TESTER SIMULATION PANEL (Visible only to Tester) */}
+        {/* 3. TESTER DASHBOARD & SIMULATION SUITE (Only when logged in as tester) */}
         {currentRole === 'tester' && (
           <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.warningBorder }]}>
             <View style={styles.cardHeader}>
@@ -477,9 +459,9 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
                 <FlaskConical size={18} color={colors.warning} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: colors.warning }]}>🧪 QA Tester & Simulation Suite</Text>
+                <Text style={[styles.cardTitle, { color: colors.warning }]}>QA Tester Dashboard & Simulation Suite</Text>
                 <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-                  Dev tools & simulated hazard triggers (Hidden from regular users)
+                  Dev triggers & hazard simulation tools (Hidden from citizens)
                 </Text>
               </View>
             </View>
@@ -492,7 +474,7 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
                   <Text style={[styles.testerControlTitle, { color: colors.textPrimary }]}>Danger Mode Simulation</Text>
                 </View>
                 <Text style={[styles.testerControlSub, { color: colors.textSecondary }]}>
-                  Forces SOS critical alarms, Red Alert UI thresholds, and highway corridor blockages.
+                  Simulates critical slope failure across telemetry monitors and highway corridor maps.
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -541,6 +523,46 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
           </View>
         )}
 
+        {/* 4. SUPABASE DATABASE SCHEMA */}
+        <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardHeaderIcon, { backgroundColor: colors.subPanel }]}>
+              <Database size={18} color={colors.steelBlue} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Supabase Real-Time Database</Text>
+              <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
+                meddqcbnupkmreawagyl.supabase.co
+              </Text>
+            </View>
+            <View style={[styles.dbOnlineBadge, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}>
+              <View style={[styles.dbOnlineDot, { backgroundColor: colors.success }]} />
+              <Text style={[styles.dbOnlineText, { color: colors.success }]}>Database Connected</Text>
+            </View>
+          </View>
+
+          <View style={[styles.dbInfoBox, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
+            <View style={styles.dbInfoRow}>
+              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>Database Endpoint:</Text>
+              <Text style={[styles.dbInfoValue, { color: colors.textPrimary }]} numberOfLines={1}>
+                https://meddqcbnupkmreawagyl.supabase.co
+              </Text>
+            </View>
+            <View style={styles.dbInfoRow}>
+              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>Auth & Role Table:</Text>
+              <Text style={[styles.dbInfoValue, { color: colors.steelBlue }]}>
+                ✓ `public.app_users` (admin, tester, user)
+              </Text>
+            </View>
+            <View style={styles.dbInfoRow}>
+              <Text style={[styles.dbInfoLabel, { color: colors.textSecondary }]}>Incident Database:</Text>
+              <Text style={[styles.dbInfoValue, { color: colors.success }]}>
+                ✓ `public.incident_reports` (Real-Time GPS Sync)
+              </Text>
+            </View>
+          </View>
+        </View>
+
         {/* 5. Theme Mode Switcher */}
         <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
@@ -576,10 +598,10 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
             <View style={styles.settingTextCol}>
               <View style={styles.settingTitleRow}>
                 <Volume2 size={15} color={colors.textPrimary} />
-                <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Emergency Audio Warning Siren</Text>
+                <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Emergency Audio Siren</Text>
               </View>
               <Text style={[styles.settingDesc, { color: colors.textSecondary }]}>
-                Sound acoustic alarm when Red Alert landslide threshold is triggered in your sector.
+                Acoustic alarm when Red Alert landslide threshold is triggered.
               </Text>
             </View>
             <Switch
@@ -615,7 +637,7 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
                 <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Offline GIS Mountain Caching</Text>
               </View>
               <Text style={[styles.settingDesc, { color: colors.textSecondary }]}>
-                Preload offline terrain maps for areas with intermittent mobile cellular connectivity.
+                Preload offline terrain maps for areas with intermittent connectivity.
               </Text>
             </View>
             <Switch
@@ -631,7 +653,7 @@ ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUD
         <View style={styles.footerBox}>
           <Info size={14} color={colors.textMuted} />
           <Text style={[styles.footerText, { color: colors.textMuted }]}>
-            Rakshak NER v1.5.0 • Supabase Cloud Database Active • Google Gemini 2.5 Flash Calibrated
+            Rakshak NER v1.5.0 • Supabase Database Active • Google Gemini 2.5 Flash Calibrated
           </Text>
         </View>
       </ScrollView>
@@ -694,33 +716,154 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 1,
   },
-  profileBox: {
+  cancelAuthBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  cancelAuthText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  authOptionBox: {
+    gap: 8,
+    marginTop: 4,
+  },
+  authOptionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  authOptionDesc: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginBottom: 4,
+  },
+  googleSignInBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    borderRadius: 14,
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 16,
+    marginTop: 4,
+  },
+  googleIconContainer: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#EA4335',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleLetter: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  googleSignInText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    paddingHorizontal: 6,
+  },
+  inputGroup: {
+    gap: 4,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  inputBox: {
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 13,
+  },
+  authMessageText: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  primarySignInBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 6,
+  },
+  primarySignInText: {
+    color: '#ffffff',
+    fontSize: 13.5,
+    fontWeight: '800',
+  },
+  quickFillBox: {
+    marginTop: 10,
+    gap: 6,
+  },
+  quickFillLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  quickFillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickFillChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  quickFillChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 14,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     borderWidth: 2,
     borderColor: '#6B7C98',
   },
-  profileDetails: {
+  profileInfoCol: {
     flex: 1,
+    minWidth: 200,
   },
-  nameRow: {
+  profileNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 8,
   },
   profileName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
   },
   roleBadge: {
@@ -737,206 +880,66 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  profileRole: {
+  profileRoleTitle: {
     fontSize: 11,
     marginTop: 1,
   },
-  logoutBtn: {
+  profileActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  logoutText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  roleSelectLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  roleGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  roleCard: {
-    flex: 1,
-    minWidth: 220,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-  },
-  roleCardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  roleCardIcon: {
-    fontSize: 22,
-  },
-  selectedCheckPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  selectedCheckText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  roleCardTitle: {
-    fontSize: 13.5,
-    fontWeight: '800',
-  },
-  roleCardDesc: {
-    fontSize: 11,
-    marginTop: 4,
-    lineHeight: 15,
-  },
-  dbOnlineBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  dbOnlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  dbOnlineText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-  },
-  dbInfoBox: {
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
     gap: 8,
   },
-  dbInfoRow: {
+  switchAccountBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  dbInfoLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  dbInfoValue: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  credentialLoginCard: {
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginTop: 14,
-    gap: 10,
-  },
-  credentialLoginTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  credentialLoginSub: {
-    fontSize: 11.5,
-    lineHeight: 16,
-  },
-  inputFieldGroup: {
-    gap: 4,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  credentialInput: {
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    fontSize: 13,
-  },
-  authMessageText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  loginActionRow: {
-    marginTop: 4,
-  },
-  loginSubmitBtn: {
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loginSubmitText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  quickFillContainer: {
-    marginTop: 6,
-    gap: 6,
-  },
-  quickFillLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  quickFillBadgesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  quickFillBadge: {
+    gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
   },
-  quickFillBadgeText: {
-    fontSize: 11,
+  switchAccountText: {
+    fontSize: 11.5,
     fontWeight: '700',
   },
-  sqlHelperCard: {
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  signOutText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  adminStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  adminStatCard: {
+    flex: 1,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    marginTop: 12,
-    gap: 6,
-  },
-  sqlHeaderRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  sqlHeaderTitle: {
+  adminStatVal: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  adminStatLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  sectionSubtitle: {
     fontSize: 13,
     fontWeight: '800',
-  },
-  copySqlBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  copySqlText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  sqlSubText: {
-    fontSize: 11,
-    lineHeight: 15,
+    marginBottom: 10,
   },
   refreshReportsBtn: {
     flexDirection: 'row',
@@ -1071,6 +1074,45 @@ const styles = StyleSheet.create({
   },
   rainPresetText: {
     fontSize: 11,
+    fontWeight: '700',
+  },
+  dbOnlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  dbOnlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dbOnlineText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  dbInfoBox: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  dbInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  dbInfoLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dbInfoValue: {
+    fontSize: 12,
     fontWeight: '700',
   },
   switchToggleRow: {
