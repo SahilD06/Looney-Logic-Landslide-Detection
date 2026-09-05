@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
+  TouchableOpacity,
   Platform,
 } from 'react-native';
 import { Header } from '../../components/Header';
@@ -16,15 +15,44 @@ import { SOSBanner } from '../../components/SOSBanner';
 import { fetchLiveTelemetry, fetchNasaEvents, TelemetryData, NasaEvent } from '../../services/api';
 import { calculateRisk, RiskEvaluation } from '../../services/aiEngine';
 import { CONNECTIVITY_STATUS } from '../../services/mockData';
-import { MapPin, Navigation, RefreshCw, AlertTriangle, ShieldCheck, Thermometer, Wind } from 'lucide-react-native';
+import { MapPin, Navigation, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { useAppTheme } from '../../context/ThemeContext';
 
 export default function DashboardScreen() {
+  const { colors, isDark } = useAppTheme();
   const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
   const [nasaEvents, setNasaEvents] = useState<NasaEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [simulatedDanger, setSimulatedDanger] = useState<boolean>(false);
   const [sosStatus, setSosStatus] = useState<'none' | 'needs_help' | 'safe'>('none');
+  const corridorScrollRef = useRef<ScrollView>(null);
+  const [scrollOffset, setScrollOffset] = useState<number>(0);
+
+  const scrollCorridors = (direction: 'left' | 'right') => {
+    const step = 280;
+    const delta = direction === 'left' ? -step : step;
+
+    if (Platform.OS === 'web') {
+      const el =
+        document.getElementById('corridor-scroll-view') ||
+        (corridorScrollRef.current as any)?.getScrollableNode?.() ||
+        (corridorScrollRef.current as any)?._nativeNode;
+
+      if (el) {
+        if (typeof el.scrollBy === 'function') {
+          el.scrollBy({ left: delta, behavior: 'smooth' });
+        } else if (typeof el.scrollLeft === 'number') {
+          el.scrollLeft += delta;
+        }
+        return;
+      }
+    }
+
+    const newOffset = direction === 'left' ? Math.max(0, scrollOffset - step) : scrollOffset + step;
+    setScrollOffset(newOffset);
+    corridorScrollRef.current?.scrollTo({ x: newOffset, animated: true });
+  };
 
   const loadData = async () => {
     try {
@@ -54,7 +82,7 @@ export default function DashboardScreen() {
   const risk: RiskEvaluation = calculateRisk('NER Regional', telemetry, simulatedDanger);
 
   return (
-    <View style={styles.container}>
+    <View style={StyleSheet.flatten([styles.container, { backgroundColor: colors.bg }])}>
       <Header onRefresh={onRefresh} isLive={true} />
 
       <ScrollView
@@ -62,17 +90,17 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#38bdf8" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.steelBlue} />
         }
       >
-        {/* Quick Location & Status Pill */}
-        <View style={styles.locationBar}>
+        {/* Quick Location & Status Pill - Enlarged */}
+        <View style={[styles.locationBar, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           <View style={styles.locationLeft}>
-            <MapPin size={14} color="#38bdf8" />
-            <Text style={styles.locationText}>East Khasi Hills • Shillong NER</Text>
+            <MapPin size={16} color={colors.steelBlue} />
+            <Text style={[styles.locationText, { color: colors.textPrimary }]}>East Khasi Hills • Shillong Sector</Text>
           </View>
           <View style={styles.telemetryQuickRow}>
-            <Text style={styles.telemetryQuickText}>
+            <Text style={[styles.telemetryQuickText, { color: colors.textSecondary }]}>
               {telemetry?.temperature ?? 22}°C • {telemetry?.humidity ?? 88}% RH
             </Text>
           </View>
@@ -90,27 +118,60 @@ export default function DashboardScreen() {
         {/* AI Susceptibility Gauge */}
         <RiskGauge risk={risk} telemetry={telemetry} loading={loading} />
 
-        {/* Critical Corridors Ticker */}
+        {/* Critical Corridors Ticker - Enlarged */}
         <View style={styles.corridorContainer}>
           <View style={styles.sectionHeader}>
-            <Navigation size={14} color="#f59e0b" />
-            <Text style={styles.sectionTitle}>High-Risk Corridors</Text>
+            <View style={styles.sectionHeaderLeft}>
+              <Navigation size={16} color={colors.steelBlue} />
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>High-Risk Highway Corridors</Text>
+            </View>
+            <View style={styles.scrollNavControls}>
+              <TouchableOpacity
+                style={[styles.scrollNavBtn, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
+                onPress={() => scrollCorridors('left')}
+                activeOpacity={0.6}
+                accessibilityLabel="Scroll highways left"
+              >
+                <ChevronLeft size={18} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.scrollNavBtn, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
+                onPress={() => scrollCorridors('right')}
+                activeOpacity={0.6}
+                accessibilityLabel="Scroll highways right"
+              >
+                <ChevronRight size={18} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.corridorScroll}>
+          <ScrollView
+            ref={corridorScrollRef}
+            nativeID="corridor-scroll-view"
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.corridorScroll}
+            contentContainerStyle={styles.corridorScrollContent}
+          >
             {CONNECTIVITY_STATUS.map((item) => (
-              <View key={item.id} style={styles.corridorCard}>
+              <View key={item.id} style={[styles.corridorCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
                 <View style={styles.corridorCardTop}>
-                  <Text style={styles.corridorRoute}>{item.route}</Text>
+                  <Text style={[styles.corridorRoute, { color: colors.textPrimary }]}>{item.route}</Text>
                   <View
                     style={[
                       styles.statusPill,
                       {
                         backgroundColor:
                           item.status === 'Blocked'
-                            ? 'rgba(239, 68, 68, 0.2)'
+                            ? colors.dangerBg
                             : item.status === 'Vulnerable'
-                            ? 'rgba(245, 158, 11, 0.2)'
-                            : 'rgba(16, 185, 129, 0.2)',
+                            ? colors.warningBg
+                            : colors.successBg,
+                        borderColor:
+                          item.status === 'Blocked'
+                            ? colors.dangerBorder
+                            : item.status === 'Vulnerable'
+                            ? colors.warningBorder
+                            : colors.successBorder,
                       },
                     ]}
                   >
@@ -120,10 +181,10 @@ export default function DashboardScreen() {
                         {
                           color:
                             item.status === 'Blocked'
-                              ? '#f87171'
+                              ? colors.danger
                               : item.status === 'Vulnerable'
-                              ? '#fbbf24'
-                              : '#34d399',
+                              ? colors.warning
+                              : colors.success,
                         },
                       ]}
                     >
@@ -131,10 +192,10 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.corridorName} numberOfLines={1}>
+                <Text style={[styles.corridorName, { color: colors.textSecondary }]} numberOfLines={1}>
                   {item.name}
                 </Text>
-                <Text style={styles.corridorReason} numberOfLines={2}>
+                <Text style={[styles.corridorReason, { color: colors.textPrimary }]} numberOfLines={2}>
                   {item.reason}
                 </Text>
               </View>
@@ -152,15 +213,14 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090d16',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 14,
-    paddingBottom: 40,
-    maxWidth: 900,
+    padding: 16,
+    paddingBottom: 50,
+    maxWidth: 960,
     alignSelf: 'center',
     width: '100%',
   },
@@ -168,89 +228,112 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#111827',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#1f2937',
-    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   locationLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   locationText: {
-    color: '#e2e8f0',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
   },
   telemetryQuickRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   telemetryQuickText: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
   },
   corridorContainer: {
-    marginVertical: 10,
+    marginVertical: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
     letterSpacing: 0.5,
+  },
+  scrollNavControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  scrollNavBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer' as any,
   },
   corridorScroll: {
     flexDirection: 'row',
   },
+  corridorScrollContent: {
+    paddingRight: 8,
+  },
   corridorCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    width: 220,
-    marginRight: 10,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    width: 250,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   corridorCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   corridorRoute: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
   },
   statusPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
   },
   statusPillText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
   },
   corridorName: {
-    color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 6,
   },
   corridorReason: {
-    color: '#cbd5e1',
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 16,
   },
 });

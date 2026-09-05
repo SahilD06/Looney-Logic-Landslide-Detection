@@ -16,7 +16,7 @@ export interface RiskEvaluation {
 }
 
 /**
- * Multi-factor AI Landslide Risk Prediction algorithm
+ * Multi-factor AI Landslide Risk Prediction algorithm (Urban Slate Theme)
  */
 export const calculateRisk = (
   locationName: string = 'NER Regional',
@@ -27,9 +27,9 @@ export const calculateRisk = (
     return {
       level: 'Critical',
       score: 94,
-      color: '#ef4444',
-      bgColor: 'rgba(239, 68, 68, 0.15)',
-      badgeBorder: '#ef4444',
+      color: '#B84A4A',
+      bgColor: '#F8ECEC',
+      badgeBorder: '#D89696',
       recommendation: 'IMMEDIATE EVACUATION ADVISED. Hill slope threshold exceeded. Avoid vulnerable valley corridors.',
       factors: {
         rainfallScore: 38,
@@ -45,7 +45,6 @@ export const calculateRisk = (
   let slopeScore = 15;
 
   if (telemetry) {
-    // 1. Rainfall score (24h sum)
     const rain = telemetry.rain_24h_sum;
     if (rain > 120) rainfallScore = 38;
     else if (rain > 80) rainfallScore = 30;
@@ -53,7 +52,6 @@ export const calculateRisk = (
     else if (rain > 20) rainfallScore = 12;
     else rainfallScore = 5;
 
-    // 2. Soil Moisture Volumetric saturation (0.0 to 0.5)
     const moisture = telemetry.soil_moisture;
     if (moisture >= 0.45) soilScore = 33;
     else if (moisture >= 0.38) soilScore = 26;
@@ -61,7 +59,6 @@ export const calculateRisk = (
     else if (moisture >= 0.20) soilScore = 10;
     else soilScore = 4;
 
-    // 3. Slope geological baseline (NER hilly terrain average: 18)
     slopeScore = 18;
   }
 
@@ -71,9 +68,9 @@ export const calculateRisk = (
     return {
       level: 'Critical',
       score: totalScore,
-      color: '#ef4444', // Red
-      bgColor: 'rgba(239, 68, 68, 0.15)',
-      badgeBorder: '#ef4444',
+      color: '#B84A4A',
+      bgColor: '#F8ECEC',
+      badgeBorder: '#D89696',
       recommendation: 'RED ALERT: Severe landslide susceptibility. Restrict non-essential highway travel.',
       factors: { rainfallScore, soilScore, slopeScore },
       probabilityPercent: totalScore,
@@ -82,9 +79,9 @@ export const calculateRisk = (
     return {
       level: 'High',
       score: totalScore,
-      color: '#f97316', // Orange
-      bgColor: 'rgba(249, 115, 22, 0.15)',
-      badgeBorder: '#f97316',
+      color: '#C28B52',
+      bgColor: '#FAF2EA',
+      badgeBorder: '#E0BA92',
       recommendation: 'ORANGE WARNING: Saturated soil conditions. Monitor slope drainage and road alerts.',
       factors: { rainfallScore, soilScore, slopeScore },
       probabilityPercent: totalScore,
@@ -93,9 +90,9 @@ export const calculateRisk = (
     return {
       level: 'Moderate',
       score: totalScore,
-      color: '#eab308', // Yellow
-      bgColor: 'rgba(234, 179, 8, 0.15)',
-      badgeBorder: '#eab308',
+      color: '#AB978C',
+      bgColor: '#F5F0EC',
+      badgeBorder: '#D1C4BC',
       recommendation: 'YELLOW WATCH: Moderate rainfall recorded. Routine surveillance active.',
       factors: { rainfallScore, soilScore, slopeScore },
       probabilityPercent: totalScore,
@@ -104,9 +101,9 @@ export const calculateRisk = (
     return {
       level: 'Low',
       score: totalScore,
-      color: '#10b981', // Green
-      bgColor: 'rgba(16, 185, 129, 0.15)',
-      badgeBorder: '#10b981',
+      color: '#4D8067',
+      bgColor: '#EEF5F1',
+      badgeBorder: '#A3C7B5',
       recommendation: 'GREEN: Slopes are stable. Normal traffic operations across corridors.',
       factors: { rainfallScore, soilScore, slopeScore },
       probabilityPercent: totalScore,

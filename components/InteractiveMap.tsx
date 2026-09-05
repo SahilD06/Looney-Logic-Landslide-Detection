@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { MOCK_SENSORS, MOCK_RISK_ZONES, HISTORICAL_LANDSLIDES, SensorData, RiskZone, LandslideIncident } from '../services/mockData';
+import { MOCK_SENSORS, MOCK_RISK_ZONES, HISTORICAL_LANDSLIDES } from '../services/mockData';
 import { NasaEvent } from '../services/api';
-import { MapPin, Radio, AlertTriangle, Activity, Satellite, Layers, Info, X } from 'lucide-react-native';
+import { MapPin, AlertTriangle, Activity, Satellite, Layers, ZoomIn, ZoomOut, Compass } from 'lucide-react-native';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface InteractiveMapProps {
   nasaEvents?: NasaEvent[];
@@ -10,309 +11,464 @@ interface InteractiveMapProps {
 }
 
 type FilterType = 'all' | 'sensors' | 'zones' | 'history' | 'nasa';
+type BasemapType = 'topo' | 'satellite' | 'street' | 'slate';
+
+const BASEMAP_URLS = {
+  topo: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  street: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  slate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+};
+
+const REGIONS = [
+  { name: 'NER Overview', center: [26.1445, 91.7362] as [number, number], zoom: 7 },
+  { name: 'Shillong (Meghalaya)', center: [25.5788, 91.8933] as [number, number], zoom: 11 },
+  { name: 'Gangtok (Sikkim)', center: [27.3314, 88.6138] as [number, number], zoom: 11 },
+  { name: 'Tawang (Arunachal)', center: [27.5860, 91.8594] as [number, number], zoom: 10 },
+  { name: 'Dima Hasao (Assam)', center: [25.1764, 93.0232] as [number, number], zoom: 10 },
+];
 
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   nasaEvents = [],
   onSelectLocation,
 }) => {
+  const { colors, isDark } = useAppTheme();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [selectedItem, setSelectedItem] = useState<{
-    type: 'sensor' | 'zone' | 'history' | 'nasa';
-    data: any;
-  } | null>(null);
+  const [basemap, setBasemap] = useState<BasemapType>('topo');
+  const [isLeafletReady, setIsLeafletReady] = useState(false);
+  const mapContainerId = useRef(`leaflet-map-${Math.random().toString(36).substring(2, 9)}`).current;
+  const mapInstanceRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
+  const layerGroupRef = useRef<any>(null);
 
-  // Region bounds: North East India (lat ~23.5 - 28.0, lon ~88.0 - 95.5)
-  // Mapping formula to relative 0% - 100% position on canvas
-  const minLat = 23.2, maxLat = 28.2;
-  const minLon = 88.0, maxLon = 95.5;
+  // Load Leaflet Script dynamically if on web
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
 
-  const getCanvasCoords = (lat: number, lon: number) => {
-    // Invert lat for top (0%) to bottom (100%)
-    const top = Math.max(8, Math.min(88, ((maxLat - lat) / (maxLat - minLat)) * 100));
-    const left = Math.max(8, Math.min(92, ((lon - minLon) / (maxLon - minLon)) * 100));
-    return { top: `${top}%` as const, left: `${left}%` as const };
+    const loadLeaflet = () => {
+      const win = window as any;
+      if (win.L) {
+        setIsLeafletReady(true);
+        return;
+      }
+
+      const existingScript = document.getElementById('leaflet-js-cdn');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => setIsLeafletReady(true));
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'leaflet-js-cdn';
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.async = true;
+      script.onload = () => {
+        setIsLeafletReady(true);
+      };
+      document.head.appendChild(script);
+    };
+
+    loadLeaflet();
+  }, []);
+
+  // Initialize Map
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isLeafletReady) return;
+
+    const win = window as any;
+    const L = win.L;
+    if (!L) return;
+
+    const container = document.getElementById(mapContainerId);
+    if (!container) return;
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
+    const map = L.map(mapContainerId, {
+      center: [26.1445, 91.7362],
+      zoom: 7,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    const tileUrl = BASEMAP_URLS[basemap];
+    tileLayerRef.current = L.tileLayer(tileUrl, {
+      maxZoom: 18,
+      subdomains: ['a', 'b', 'c'],
+    }).addTo(map);
+
+    layerGroupRef.current = L.layerGroup().addTo(map);
+    mapInstanceRef.current = map;
+
+    renderMapFeatures(map, layerGroupRef.current, activeFilter);
+
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [isLeafletReady, mapContainerId]);
+
+  // Handle Basemap Switch
+  useEffect(() => {
+    if (!mapInstanceRef.current || Platform.OS !== 'web') return;
+    const win = window as any;
+    const L = win.L;
+    if (!L) return;
+
+    if (tileLayerRef.current) {
+      mapInstanceRef.current.removeLayer(tileLayerRef.current);
+    }
+    const tileUrl = BASEMAP_URLS[basemap];
+    tileLayerRef.current = L.tileLayer(tileUrl, {
+      maxZoom: 18,
+      subdomains: ['a', 'b', 'c'],
+    }).addTo(mapInstanceRef.current);
+  }, [basemap]);
+
+  // Handle Filter Change
+  useEffect(() => {
+    if (!mapInstanceRef.current || !layerGroupRef.current || Platform.OS !== 'web') return;
+    renderMapFeatures(mapInstanceRef.current, layerGroupRef.current, activeFilter);
+  }, [activeFilter, nasaEvents]);
+
+  const renderMapFeatures = (map: any, layerGroup: any, filter: FilterType) => {
+    const win = window as any;
+    const L = win.L;
+    if (!L || !layerGroup) return;
+
+    layerGroup.clearLayers();
+
+    const makeIcon = (color: string, iconSymbol: string, size: number = 26) => {
+      return L.divIcon({
+        className: 'custom-leaflet-marker',
+        html: `
+          <div style="
+            background-color: ${color};
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 50%;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px ${color}, 0 2px 6px rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: bold;
+          ">
+            ${iconSymbol}
+          </div>
+        `,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
+    };
+
+    // 1. Render Risk Zones
+    if (filter === 'all' || filter === 'zones') {
+      MOCK_RISK_ZONES.forEach((zone) => {
+        const isCritical = zone.riskLevel === 'critical';
+        const color = isCritical ? '#B84A4A' : zone.riskLevel === 'high' ? '#C28B52' : '#6B7C98';
+
+        const circle = L.circle(zone.center, {
+          radius: zone.radius,
+          color: color,
+          fillColor: color,
+          fillOpacity: isCritical ? 0.28 : 0.18,
+          weight: 2.5,
+          dashArray: '6, 6',
+        });
+
+        circle.bindPopup(`
+          <div style="padding: 6px; font-family: sans-serif; color: #2C2827;">
+            <div style="color: ${color}; font-size: 11px; font-weight: 800; text-transform: uppercase;">
+              ${zone.riskLevel} SUSCEPTIBILITY ZONE
+            </div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 3px; color: #2C2827;">${zone.name}</div>
+            <div style="font-size: 11px; color: #5E5653; margin-top: 2px;">State: ${zone.state}</div>
+            <div style="margin-top: 8px; border-top: 1px solid #DCD7D8; padding-top: 6px; font-size: 12px; color: #5E5653; line-height: 1.4;">
+              <div>• Slope Angle: <b>${zone.slopeAngle}°</b></div>
+              <div>• At-Risk Population: <b>${(zone.populationAffected / 1000).toFixed(0)}k residents</b></div>
+            </div>
+          </div>
+        `);
+
+        layerGroup.addLayer(circle);
+      });
+    }
+
+    // 2. Render IoT Slope Sensors
+    if (filter === 'all' || filter === 'sensors') {
+      MOCK_SENSORS.forEach((sensor) => {
+        const isAlert = sensor.status === 'critical';
+        const isWarn = sensor.status === 'warning';
+        const color = isAlert ? '#B84A4A' : isWarn ? '#C28B52' : '#6B7C98';
+        const icon = makeIcon(color, '⚡', 26);
+
+        const marker = L.marker(sensor.location, { icon });
+        marker.bindPopup(`
+          <div style="padding: 6px; font-family: sans-serif; color: #2C2827;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: 800; color: #6B7C98;">${sensor.id}</span>
+              <span style="background: ${isAlert ? '#F8ECEC' : '#EEF5F1'}; color: ${isAlert ? '#B84A4A' : '#4D8067'}; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 6px; border: 1px solid ${isAlert ? '#D89696' : '#A3C7B5'};">
+                ${sensor.status.toUpperCase()}
+              </span>
+            </div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 4px; color: #2C2827;">${sensor.name}</div>
+            <div style="font-size: 11px; color: #5E5653; text-transform: capitalize;">${sensor.state} • ${sensor.type.replace('_', ' ')}</div>
+            <div style="margin-top: 8px; background: #FAF9F9; padding: 10px; border-radius: 8px; border: 1px solid #DCD7D8;">
+              <div style="font-size: 11px; color: #5E5653;">Live Telemetry:</div>
+              <div style="font-size: 17px; font-weight: 900; color: ${color};">
+                ${sensor.value} <span style="font-size: 11px; color: #7B7F8A;">${sensor.unit}</span>
+              </div>
+              <div style="font-size: 10px; color: #7B7F8A; margin-top: 2px;">Threshold: ${sensor.threshold} ${sensor.unit}</div>
+            </div>
+          </div>
+        `);
+
+        layerGroup.addLayer(marker);
+      });
+    }
+
+    // 3. Render Historical Landslides
+    if (filter === 'all' || filter === 'history') {
+      HISTORICAL_LANDSLIDES.forEach((ls) => {
+        const icon = makeIcon('#B84A4A', '⚠', 24);
+        const marker = L.marker(ls.location, { icon });
+        marker.bindPopup(`
+          <div style="padding: 6px; font-family: sans-serif; color: #2C2827;">
+            <div style="font-size: 11px; font-weight: 800; color: #B84A4A;">HISTORICAL LANDSLIDE</div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 2px; color: #2C2827;">${ls.title}</div>
+            <div style="font-size: 11px; color: #5E5653;">Recorded: ${ls.date} (${ls.state})</div>
+            <div style="margin-top: 8px; font-size: 12px; color: #5E5653; line-height: 1.4;">
+              <b>Impact:</b> ${ls.impact}
+            </div>
+          </div>
+        `);
+        layerGroup.addLayer(marker);
+      });
+    }
+
+    // 4. Render NASA EONET alerts
+    if (filter === 'all' || filter === 'nasa') {
+      nasaEvents.forEach((ev) => {
+        const icon = makeIcon('#AB978C', '🛰', 26);
+        const marker = L.marker(ev.coordinates, { icon });
+        marker.bindPopup(`
+          <div style="padding: 6px; font-family: sans-serif; color: #2C2827;">
+            <div style="font-size: 11px; font-weight: 800; color: #AB978C;">NASA SATELLITE ALERT</div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 2px; color: #2C2827;">${ev.title}</div>
+            <div style="font-size: 11px; color: #5E5653;">Category: ${ev.category}</div>
+            <div style="margin-top: 6px; font-size: 12px; color: #5E5653;">
+              Monitored by NASA Earth Observing System (EOS).
+            </div>
+          </div>
+        `);
+        layerGroup.addLayer(marker);
+      });
+    }
+  };
+
+  const flyToRegion = (center: [number, number], zoom: number) => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo(center, zoom, { duration: 1.2 });
+    }
+  };
+
+  const handleZoom = (delta: number) => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setZoom(mapInstanceRef.current.getZoom() + delta);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header & Filter Bar */}
-      <View style={styles.mapHeader}>
+    <View style={[styles.container, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+      {/* Header & Filter Bar - Enlarged */}
+      <View style={[styles.mapHeader, { borderBottomColor: colors.border, backgroundColor: colors.subPanel }]}>
         <View style={styles.titleRow}>
-          <Layers size={16} color="#38bdf8" />
-          <Text style={styles.mapTitle}>NER Spatial GIS Radar</Text>
-          <Text style={styles.subtext}>(Live Multi-Layer)</Text>
+          <Layers size={18} color={colors.steelBlue} />
+          <Text style={[styles.mapTitle, { color: colors.textPrimary }]}>NER Spatial GIS Radar</Text>
+          <Text style={[styles.subtext, { color: colors.textSecondary }]}>(Live Terrain & Satellite GIS)</Text>
+
+          {/* Basemap Toggle Buttons */}
+          <View style={[styles.basemapToggleRow, { backgroundColor: colors.borderSoft, borderColor: colors.border }]}>
+            {(['topo', 'satellite', 'street', 'slate'] as BasemapType[]).map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[styles.basemapBtn, basemap === type && { backgroundColor: colors.steelBlue }]}
+                onPress={() => setBasemap(type)}
+              >
+                <Text style={[styles.basemapBtnText, { color: basemap === type ? '#ffffff' : colors.textSecondary }]}>
+                  {type === 'topo' ? 'Topo' : type === 'satellite' ? 'Satellite' : type === 'street' ? 'Street' : 'Slate'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
+        {/* Layer Filters - Enlarged */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
           <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
+            style={[styles.filterChip, { backgroundColor: colors.borderSoft, borderColor: colors.border }, activeFilter === 'all' && { backgroundColor: colors.steelBlue, borderColor: colors.steelBlue }]}
             onPress={() => setActiveFilter('all')}
           >
-            <Text style={[styles.filterChipText, activeFilter === 'all' && styles.filterChipTextActive]}>
+            <Text style={[styles.filterChipText, { color: activeFilter === 'all' ? '#ffffff' : colors.textSecondary }]}>
               All Layers
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'sensors' && styles.filterChipActive]}
+            style={[styles.filterChip, { backgroundColor: colors.borderSoft, borderColor: colors.border }, activeFilter === 'sensors' && { backgroundColor: colors.steelBlue, borderColor: colors.steelBlue }]}
             onPress={() => setActiveFilter('sensors')}
           >
-            <Activity size={11} color={activeFilter === 'sensors' ? '#ffffff' : '#38bdf8'} />
-            <Text style={[styles.filterChipText, activeFilter === 'sensors' && styles.filterChipTextActive]}>
+            <Activity size={13} color={activeFilter === 'sensors' ? '#ffffff' : colors.steelBlue} />
+            <Text style={[styles.filterChipText, { color: activeFilter === 'sensors' ? '#ffffff' : colors.textSecondary }]}>
               IoT Sensors ({MOCK_SENSORS.length})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'zones' && styles.filterChipActive]}
+            style={[styles.filterChip, { backgroundColor: colors.borderSoft, borderColor: colors.border }, activeFilter === 'zones' && { backgroundColor: colors.steelBlue, borderColor: colors.steelBlue }]}
             onPress={() => setActiveFilter('zones')}
           >
-            <AlertTriangle size={11} color={activeFilter === 'zones' ? '#ffffff' : '#f97316'} />
-            <Text style={[styles.filterChipText, activeFilter === 'zones' && styles.filterChipTextActive]}>
+            <AlertTriangle size={13} color={activeFilter === 'zones' ? '#ffffff' : colors.warning} />
+            <Text style={[styles.filterChipText, { color: activeFilter === 'zones' ? '#ffffff' : colors.textSecondary }]}>
               High-Risk Zones
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'nasa' && styles.filterChipActive]}
+            style={[styles.filterChip, { backgroundColor: colors.borderSoft, borderColor: colors.border }, activeFilter === 'nasa' && { backgroundColor: colors.steelBlue, borderColor: colors.steelBlue }]}
             onPress={() => setActiveFilter('nasa')}
           >
-            <Satellite size={11} color={activeFilter === 'nasa' ? '#ffffff' : '#eab308'} />
-            <Text style={[styles.filterChipText, activeFilter === 'nasa' && styles.filterChipTextActive]}>
+            <Satellite size={13} color={activeFilter === 'nasa' ? '#ffffff' : colors.taupe} />
+            <Text style={[styles.filterChipText, { color: activeFilter === 'nasa' ? '#ffffff' : colors.textSecondary }]}>
               NASA Alerts
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'history' && styles.filterChipActive]}
+            style={[styles.filterChip, { backgroundColor: colors.borderSoft, borderColor: colors.border }, activeFilter === 'history' && { backgroundColor: colors.steelBlue, borderColor: colors.steelBlue }]}
             onPress={() => setActiveFilter('history')}
           >
-            <MapPin size={11} color={activeFilter === 'history' ? '#ffffff' : '#ef4444'} />
-            <Text style={[styles.filterChipText, activeFilter === 'history' && styles.filterChipTextActive]}>
+            <MapPin size={13} color={activeFilter === 'history' ? '#ffffff' : colors.danger} />
+            <Text style={[styles.filterChipText, { color: activeFilter === 'history' ? '#ffffff' : colors.textSecondary }]}>
               Past Slides
             </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
-      {/* Map Surface View */}
-      <View style={styles.mapCanvas}>
-        {/* Topographic Background Grids & Regional Label */}
-        <View style={styles.gridOverlay}>
-          <View style={styles.gridLineHorizontal} />
-          <View style={[styles.gridLineHorizontal, { top: '50%' }]} />
-          <View style={styles.gridLineVertical} />
-          <View style={[styles.gridLineVertical, { left: '50%' }]} />
-        </View>
-
-        {/* Topographic region labels */}
-        <Text style={[styles.regionTag, { top: '15%', left: '12%' }]}>Sikkim Himalaya</Text>
-        <Text style={[styles.regionTag, { top: '12%', left: '60%' }]}>Arunachal Range</Text>
-        <Text style={[styles.regionTag, { top: '48%', left: '42%' }]}>Brahmaputra Valley</Text>
-        <Text style={[styles.regionTag, { top: '65%', left: '35%' }]}>Meghalaya Plateau</Text>
-        <Text style={[styles.regionTag, { top: '80%', left: '70%' }]}>Mizo Hills</Text>
-
-        {/* Risk Zones Circles */}
-        {(activeFilter === 'all' || activeFilter === 'zones') &&
-          MOCK_RISK_ZONES.map((zone) => {
-            const coords = getCanvasCoords(zone.center[0], zone.center[1]);
-            const isCritical = zone.riskLevel === 'critical';
-            return (
-              <TouchableOpacity
-                key={zone.id}
-                style={[
-                  styles.zoneCircle,
-                  coords,
-                  {
-                    borderColor: isCritical ? '#ef4444' : '#f97316',
-                    backgroundColor: isCritical ? 'rgba(239, 68, 68, 0.18)' : 'rgba(249, 115, 22, 0.15)',
-                  },
-                ]}
-                onPress={() => setSelectedItem({ type: 'zone', data: zone })}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.zoneCoreDot, { backgroundColor: isCritical ? '#ef4444' : '#f97316' }]} />
-              </TouchableOpacity>
-            );
-          })}
-
-        {/* IoT Sensors */}
-        {(activeFilter === 'all' || activeFilter === 'sensors') &&
-          MOCK_SENSORS.map((sensor) => {
-            const coords = getCanvasCoords(sensor.location[0], sensor.location[1]);
-            const isAlert = sensor.status === 'critical';
-            return (
-              <TouchableOpacity
-                key={sensor.id}
-                style={[styles.markerButton, coords]}
-                onPress={() => setSelectedItem({ type: 'sensor', data: sensor })}
-                activeOpacity={0.8}
-              >
-                <View
-                  style={[
-                    styles.sensorMarker,
-                    {
-                      backgroundColor: isAlert ? '#ef4444' : '#0284c7',
-                      borderColor: isAlert ? '#fca5a5' : '#7dd3fc',
-                    },
-                  ]}
-                >
-                  <Activity size={10} color="#ffffff" />
-                </View>
-                <Text style={styles.markerLabel}>{sensor.name.split(' ')[0]}</Text>
-              </TouchableOpacity>
-            );
-          })}
-
-        {/* NASA EONET Alerts */}
-        {(activeFilter === 'all' || activeFilter === 'nasa') &&
-          nasaEvents.map((event) => {
-            const coords = getCanvasCoords(event.coordinates[0], event.coordinates[1]);
-            return (
-              <TouchableOpacity
-                key={event.id}
-                style={[styles.markerButton, coords]}
-                onPress={() => setSelectedItem({ type: 'nasa', data: event })}
-                activeOpacity={0.8}
-              >
-                <View style={styles.nasaMarker}>
-                  <Satellite size={11} color="#ffffff" />
-                </View>
-                <Text style={[styles.markerLabel, { color: '#fde047' }]}>NASA</Text>
-              </TouchableOpacity>
-            );
-          })}
-
-        {/* Historical Landslides */}
-        {(activeFilter === 'all' || activeFilter === 'history') &&
-          HISTORICAL_LANDSLIDES.map((ls) => {
-            const coords = getCanvasCoords(ls.location[0], ls.location[1]);
-            return (
-              <TouchableOpacity
-                key={ls.id}
-                style={[styles.markerButton, coords]}
-                onPress={() => setSelectedItem({ type: 'history', data: ls })}
-                activeOpacity={0.8}
-              >
-                <View style={styles.historyMarker}>
-                  <AlertTriangle size={10} color="#ffffff" />
-                </View>
-                <Text style={[styles.markerLabel, { color: '#f87171' }]}>Slide</Text>
-              </TouchableOpacity>
-            );
-          })}
-      </View>
-
-      {/* Selected Item Detail Card */}
-      {selectedItem && (
-        <View style={styles.detailCard}>
-          <View style={styles.detailCardHeader}>
-            <View style={styles.detailBadge}>
-              <Text style={styles.detailBadgeText}>{selectedItem.type.toUpperCase()}</Text>
-            </View>
-            <TouchableOpacity onPress={() => setSelectedItem(null)} style={styles.closeBtn}>
-              <X size={16} color="#94a3b8" />
-            </TouchableOpacity>
+      {/* Map Surface View - Height Increased to 480px */}
+      <View style={[styles.mapCanvasWrapper, { backgroundColor: colors.bg }]}>
+        {Platform.OS === 'web' ? (
+          <div
+            id={mapContainerId}
+            style={{
+              width: '100%',
+              height: '480px',
+              backgroundColor: colors.bg,
+              zIndex: 1,
+            }}
+          />
+        ) : (
+          <View style={styles.mobileFallback}>
+            <Text style={[styles.mobileFallbackText, { color: colors.textSecondary }]}>GIS Map View Active</Text>
           </View>
+        )}
 
-          {selectedItem.type === 'sensor' && (
-            <View>
-              <Text style={styles.detailTitle}>{selectedItem.data.name}</Text>
-              <Text style={styles.detailSubtitle}>
-                State: {selectedItem.data.state} | Probe: {selectedItem.data.type}
-              </Text>
-              <View style={styles.detailStatsRow}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Current Telemetry</Text>
-                  <Text style={[styles.statVal, { color: selectedItem.data.status === 'critical' ? '#ef4444' : '#38bdf8' }]}>
-                    {selectedItem.data.value} {selectedItem.data.unit}
-                  </Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Threshold</Text>
-                  <Text style={styles.statVal}>{selectedItem.data.threshold} {selectedItem.data.unit}</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Battery</Text>
-                  <Text style={styles.statVal}>{selectedItem.data.battery}%</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {selectedItem.type === 'zone' && (
-            <View>
-              <Text style={styles.detailTitle}>{selectedItem.data.name}</Text>
-              <Text style={styles.detailSubtitle}>State: {selectedItem.data.state}</Text>
-              <View style={styles.detailStatsRow}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Risk Classification</Text>
-                  <Text style={[styles.statVal, { color: '#ef4444' }]}>{selectedItem.data.riskLevel.toUpperCase()}</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Slope Angle</Text>
-                  <Text style={styles.statVal}>{selectedItem.data.slopeAngle}°</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Population</Text>
-                  <Text style={styles.statVal}>{(selectedItem.data.populationAffected / 1000).toFixed(0)}k</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {selectedItem.type === 'nasa' && (
-            <View>
-              <Text style={styles.detailTitle}>{selectedItem.data.title}</Text>
-              <Text style={styles.detailSubtitle}>Category: {selectedItem.data.category}</Text>
-              <Text style={styles.detailDesc}>
-                Satellite monitoring detected anomalous precipitation cluster and slope destabilization potential.
-              </Text>
-            </View>
-          )}
-
-          {selectedItem.type === 'history' && (
-            <View>
-              <Text style={styles.detailTitle}>{selectedItem.data.title}</Text>
-              <Text style={styles.detailSubtitle}>Date: {selectedItem.data.date} ({selectedItem.data.state})</Text>
-              <Text style={styles.detailDesc}>Impact: {selectedItem.data.impact}</Text>
-            </View>
-          )}
+        {/* Floating Zoom & Compass Controls */}
+        <View style={styles.floatingControls}>
+          <TouchableOpacity style={[styles.controlIconBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]} onPress={() => handleZoom(1)}>
+            <ZoomIn size={18} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.controlIconBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]} onPress={() => handleZoom(-1)}>
+            <ZoomOut size={18} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.controlIconBtn, { backgroundColor: colors.steelBlue, borderColor: colors.steelBlue }]}
+            onPress={() => flyToRegion([26.1445, 91.7362], 7)}
+          >
+            <Compass size={18} color="#ffffff" />
+          </TouchableOpacity>
         </View>
-      )}
+
+        {/* Regional Quick Jump Pills */}
+        <View style={styles.regionJumpBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {REGIONS.map((reg, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.regionJumpChip, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
+                onPress={() => flyToRegion(reg.center, reg.zoom)}
+              >
+                <MapPin size={12} color={colors.steelBlue} />
+                <Text style={[styles.regionJumpText, { color: colors.textPrimary }]}>{reg.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    borderRadius: 20,
+    borderWidth: 1.5,
     overflow: 'hidden',
-    marginVertical: 10,
+    marginVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
   mapHeader: {
-    padding: 12,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
   },
   mapTitle: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     letterSpacing: 0.5,
   },
   subtext: {
-    color: '#64748b',
-    fontSize: 10,
+    fontSize: 11,
+  },
+  basemapToggleRow: {
+    flexDirection: 'row',
+    marginLeft: 'auto',
+    borderRadius: 8,
+    padding: 3,
+    gap: 3,
+    borderWidth: 1,
+  },
+  basemapBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  basemapBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   filterScroll: {
     flexDirection: 'row',
@@ -320,181 +476,72 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    marginRight: 6,
-    gap: 5,
-  },
-  filterChipActive: {
-    backgroundColor: '#0284c7',
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginRight: 8,
+    gap: 6,
   },
   filterChipText: {
-    color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
-  filterChipTextActive: {
-    color: '#ffffff',
-  },
-  mapCanvas: {
-    height: 260,
-    backgroundColor: '#080d1a',
+  mapCanvasWrapper: {
     position: 'relative',
+    height: 480,
     overflow: 'hidden',
   },
-  gridOverlay: {
-    ...StyleSheet.absoluteFill,
-    opacity: 0.15,
-  },
-  gridLineHorizontal: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '25%',
-    height: 1,
-    backgroundColor: '#38bdf8',
-  },
-  gridLineVertical: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: '25%',
-    width: 1,
-    backgroundColor: '#38bdf8',
-  },
-  regionTag: {
-    position: 'absolute',
-    color: '#334155',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  zoneCircle: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ translateX: -30 }, { translateY: -30 }],
-  },
-  zoneCoreDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  markerButton: {
-    position: 'absolute',
-    alignItems: 'center',
-    transform: [{ translateX: -12 }, { translateY: -12 }],
-  },
-  sensorMarker: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0284c7',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-  },
-  nasaMarker: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#d97706',
-    borderWidth: 2,
-    borderColor: '#fde047',
+  mobileFallback: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  historyMarker: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#b91c1c',
-    borderWidth: 1.5,
-    borderColor: '#fca5a5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerLabel: {
-    color: '#cbd5e1',
-    fontSize: 8,
-    fontWeight: '700',
-    marginTop: 2,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 3,
-    borderRadius: 3,
-  },
-  detailCard: {
-    backgroundColor: '#131d33',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#1e293b',
-  },
-  detailCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  detailBadge: {
-    backgroundColor: '#1e293b',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  detailBadgeText: {
-    color: '#38bdf8',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  closeBtn: {
-    padding: 2,
-  },
-  detailTitle: {
-    color: '#f8fafc',
+  mobileFallbackText: {
     fontSize: 13,
-    fontWeight: '700',
   },
-  detailSubtitle: {
-    color: '#94a3b8',
-    fontSize: 10,
-    marginTop: 2,
-    marginBottom: 8,
-  },
-  detailDesc: {
-    color: '#cbd5e1',
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  detailStatsRow: {
-    flexDirection: 'row',
+  floatingControls: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 1000,
     gap: 8,
   },
-  statBox: {
-    flex: 1,
-    backgroundColor: '#0b1222',
-    padding: 6,
-    borderRadius: 6,
+  controlIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
   },
-  statLabel: {
-    color: '#64748b',
-    fontSize: 8,
-    fontWeight: '600',
+  regionJumpBar: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    zIndex: 1000,
   },
-  statVal: {
-    color: '#f1f5f9',
-    fontSize: 11,
+  regionJumpChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    marginRight: 8,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  regionJumpText: {
+    fontSize: 12,
     fontWeight: '800',
-    marginTop: 2,
   },
 });

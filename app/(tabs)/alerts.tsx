@@ -8,13 +8,13 @@ import {
   PhoneCall,
   Home,
   Users,
-  Navigation,
-  ExternalLink,
   ChevronRight,
   Info,
 } from 'lucide-react-native';
+import { useAppTheme } from '../../context/ThemeContext';
 
 export default function AlertsScreen() {
+  const { colors, isDark } = useAppTheme();
   const [selectedTab, setSelectedTab] = useState<'advisories' | 'shelters' | 'helplines'>('advisories');
 
   const handleCall = (number: string) => {
@@ -27,36 +27,36 @@ export default function AlertsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={StyleSheet.flatten([styles.container, { backgroundColor: colors.bg }])}>
       <Header />
 
-      <View style={styles.tabSelector}>
+      <View style={[styles.tabSelector, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
         <TouchableOpacity
-          style={[styles.tabButton, selectedTab === 'advisories' && styles.tabButtonActive]}
+          style={[styles.tabButton, selectedTab === 'advisories' && { backgroundColor: colors.steelBlue }]}
           onPress={() => setSelectedTab('advisories')}
         >
-          <AlertOctagon size={14} color={selectedTab === 'advisories' ? '#ffffff' : '#94a3b8'} />
-          <Text style={[styles.tabButtonText, selectedTab === 'advisories' && styles.tabButtonTextActive]}>
+          <AlertOctagon size={16} color={selectedTab === 'advisories' ? '#ffffff' : colors.textSecondary} />
+          <Text style={[styles.tabButtonText, { color: selectedTab === 'advisories' ? '#ffffff' : colors.textSecondary }]}>
             Early Warnings
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tabButton, selectedTab === 'shelters' && styles.tabButtonActive]}
+          style={[styles.tabButton, selectedTab === 'shelters' && { backgroundColor: colors.steelBlue }]}
           onPress={() => setSelectedTab('shelters')}
         >
-          <Home size={14} color={selectedTab === 'shelters' ? '#ffffff' : '#94a3b8'} />
-          <Text style={[styles.tabButtonText, selectedTab === 'shelters' && styles.tabButtonTextActive]}>
+          <Home size={16} color={selectedTab === 'shelters' ? '#ffffff' : colors.textSecondary} />
+          <Text style={[styles.tabButtonText, { color: selectedTab === 'shelters' ? '#ffffff' : colors.textSecondary }]}>
             Shelters
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tabButton, selectedTab === 'helplines' && styles.tabButtonActive]}
+          style={[styles.tabButton, selectedTab === 'helplines' && { backgroundColor: colors.steelBlue }]}
           onPress={() => setSelectedTab('helplines')}
         >
-          <PhoneCall size={14} color={selectedTab === 'helplines' ? '#ffffff' : '#94a3b8'} />
-          <Text style={[styles.tabButtonText, selectedTab === 'helplines' && styles.tabButtonTextActive]}>
+          <PhoneCall size={16} color={selectedTab === 'helplines' ? '#ffffff' : colors.textSecondary} />
+          <Text style={[styles.tabButtonText, { color: selectedTab === 'helplines' ? '#ffffff' : colors.textSecondary }]}>
             Helplines
           </Text>
         </TouchableOpacity>
@@ -66,46 +66,46 @@ export default function AlertsScreen() {
         {selectedTab === 'advisories' && (
           <View style={styles.section}>
             {/* Red Alert Card */}
-            <View style={[styles.alertCard, styles.redAlert]}>
+            <View style={[styles.alertCard, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}>
               <View style={styles.alertHeader}>
-                <AlertOctagon size={18} color="#ef4444" />
-                <Text style={styles.alertBadgeRed}>RED ALERT - LEVEL 4</Text>
-                <Text style={styles.alertTime}>Issued 35 mins ago</Text>
+                <AlertOctagon size={22} color={colors.danger} />
+                <Text style={[styles.alertBadgeRed, { color: colors.danger }]}>RED ALERT - LEVEL 4</Text>
+                <Text style={[styles.alertTime, { color: colors.textMuted }]}>Issued 35 mins ago</Text>
               </View>
-              <Text style={styles.alertTitle}>East Khasi & South Garo Hills Flash Warning</Text>
-              <Text style={styles.alertBody}>
+              <Text style={[styles.alertTitle, { color: colors.textPrimary }]}>East Khasi & South Garo Hills Flash Warning</Text>
+              <Text style={[styles.alertBody, { color: colors.textPrimary }]}>
                 Precipitation threshold exceeded (140mm / 24h). Critical instability detected in Sohra and Mawsynram slope cuts. Evacuation from unstable downhill settlements strongly advised.
               </Text>
-              <View style={styles.alertFooter}>
-                <Text style={styles.authorityTag}>Issued by IMD & State Disaster Management Authority</Text>
+              <View style={[styles.alertFooter, { borderTopColor: colors.dangerBorder }]}>
+                <Text style={[styles.authorityTag, { color: colors.textSecondary }]}>Issued by IMD & State Disaster Management Authority</Text>
               </View>
             </View>
 
             {/* Orange Warning Card */}
-            <View style={[styles.alertCard, styles.orangeAlert]}>
+            <View style={[styles.alertCard, { backgroundColor: colors.warningBg, borderColor: colors.warningBorder }]}>
               <View style={styles.alertHeader}>
-                <ShieldAlert size={18} color="#f97316" />
-                <Text style={styles.alertBadgeOrange}>ORANGE WARNING - LEVEL 3</Text>
-                <Text style={styles.alertTime}>Issued 2 hours ago</Text>
+                <ShieldAlert size={22} color={colors.warning} />
+                <Text style={[styles.alertBadgeOrange, { color: colors.warning }]}>ORANGE WARNING - LEVEL 3</Text>
+                <Text style={[styles.alertTime, { color: colors.textMuted }]}>Issued 2 hours ago</Text>
               </View>
-              <Text style={styles.alertTitle}>Sikkim Highway NH-10 Mudflow Precaution</Text>
-              <Text style={styles.alertBody}>
+              <Text style={[styles.alertTitle, { color: colors.textPrimary }]}>Sikkim Highway NH-10 Mudflow Precaution</Text>
+              <Text style={[styles.alertBody, { color: colors.textPrimary }]}>
                 Continuous seepage on 29th Mile and Teesta Valley roads. Heavy goods traffic restricted between 19:00 - 06:00. Use Lava - Algarah bypass if traveling.
               </Text>
-              <View style={styles.alertFooter}>
-                <Text style={styles.authorityTag}>BRO 144 Task Force Advisory</Text>
+              <View style={[styles.alertFooter, { borderTopColor: colors.warningBorder }]}>
+                <Text style={[styles.authorityTag, { color: colors.textSecondary }]}>BRO 144 Task Force Advisory</Text>
               </View>
             </View>
 
             {/* Yellow Watch Card */}
-            <View style={[styles.alertCard, styles.yellowAlert]}>
+            <View style={[styles.alertCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
               <View style={styles.alertHeader}>
-                <Info size={18} color="#eab308" />
-                <Text style={styles.alertBadgeYellow}>YELLOW WATCH - LEVEL 2</Text>
-                <Text style={styles.alertTime}>Issued 5 hours ago</Text>
+                <Info size={22} color={colors.taupe} />
+                <Text style={[styles.alertBadgeYellow, { color: colors.taupe }]}>YELLOW WATCH - LEVEL 2</Text>
+                <Text style={[styles.alertTime, { color: colors.textMuted }]}>Issued 5 hours ago</Text>
               </View>
-              <Text style={styles.alertTitle}>Dima Hasao Railway Section Surveillance</Text>
-              <Text style={styles.alertBody}>
+              <Text style={[styles.alertTitle, { color: colors.textPrimary }]}>Dima Hasao Railway Section Surveillance</Text>
+              <Text style={[styles.alertBody, { color: colors.textPrimary }]}>
                 Inclinometer ground sensors showing 0.4mm slow creep. Engineering teams deployed for slope anchoring.
               </Text>
             </View>
@@ -114,33 +114,33 @@ export default function AlertsScreen() {
 
         {selectedTab === 'shelters' && (
           <View style={styles.section}>
-            <Text style={styles.sectionSubtitle}>Designated Emergency Relief Camps & Safe Zones</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Designated Emergency Relief Camps & Safe Zones</Text>
             {EMERGENCY_SHELTERS.map((sh) => (
-              <View key={sh.id} style={styles.shelterCard}>
+              <View key={sh.id} style={[styles.shelterCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
                 <View style={styles.shelterTop}>
-                  <Text style={styles.shelterName}>{sh.name}</Text>
-                  <View style={[styles.supplyBadge, { backgroundColor: sh.suppliesStatus === 'Adequate' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}>
-                    <Text style={[styles.supplyText, { color: sh.suppliesStatus === 'Adequate' ? '#34d399' : '#f87171' }]}>
+                  <Text style={[styles.shelterName, { color: colors.textPrimary }]}>{sh.name}</Text>
+                  <View style={[styles.supplyBadge, { backgroundColor: sh.suppliesStatus === 'Adequate' ? colors.successBg : colors.dangerBg, borderColor: sh.suppliesStatus === 'Adequate' ? colors.successBorder : colors.dangerBorder }]}>
+                    <Text style={[styles.supplyText, { color: sh.suppliesStatus === 'Adequate' ? colors.success : colors.danger }]}>
                       Supplies: {sh.suppliesStatus}
                     </Text>
                   </View>
                 </View>
 
-                <Text style={styles.shelterLocation}>{sh.locationName}</Text>
+                <Text style={[styles.shelterLocation, { color: colors.textSecondary }]}>{sh.locationName}</Text>
 
-                <View style={styles.shelterStats}>
+                <View style={[styles.shelterStats, { borderTopColor: colors.borderSoft }]}>
                   <View style={styles.shelterStatItem}>
-                    <Users size={12} color="#94a3b8" />
-                    <Text style={styles.shelterStatVal}>
+                    <Users size={14} color={colors.textSecondary} />
+                    <Text style={[styles.shelterStatVal, { color: colors.textPrimary }]}>
                       {sh.currentOccupancy} / {sh.capacity} Capacity
                     </Text>
                   </View>
                   <TouchableOpacity
-                    style={styles.callShelterBtn}
+                    style={[styles.callShelterBtn, { backgroundColor: colors.subPanel, borderColor: colors.border }]}
                     onPress={() => handleCall(sh.contact)}
                   >
-                    <PhoneCall size={12} color="#38bdf8" />
-                    <Text style={styles.callShelterText}>{sh.contact}</Text>
+                    <PhoneCall size={14} color={colors.steelBlue} />
+                    <Text style={[styles.callShelterText, { color: colors.steelBlue }]}>{sh.contact}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -150,23 +150,23 @@ export default function AlertsScreen() {
 
         {selectedTab === 'helplines' && (
           <View style={styles.section}>
-            <Text style={styles.sectionSubtitle}>24x7 Quick-Dial Disaster Control Directory</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>24x7 Quick-Dial Disaster Control Directory</Text>
             {EMERGENCY_CONTACTS.map((contact, index) => (
               <TouchableOpacity
                 key={index}
-                style={styles.contactCard}
+                style={[styles.contactCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
                 onPress={() => handleCall(contact.number)}
                 activeOpacity={0.8}
               >
-                <View style={styles.contactIconCircle}>
-                  <PhoneCall size={18} color="#ef4444" />
+                <View style={[styles.contactIconCircle, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}>
+                  <PhoneCall size={20} color={colors.danger} />
                 </View>
                 <View style={styles.contactInfo}>
-                  <Text style={styles.contactTitle}>{contact.title}</Text>
-                  <Text style={styles.contactType}>{contact.type}</Text>
-                  <Text style={styles.contactNumber}>{contact.number}</Text>
+                  <Text style={[styles.contactTitle, { color: colors.textPrimary }]}>{contact.title}</Text>
+                  <Text style={[styles.contactType, { color: colors.textSecondary }]}>{contact.type}</Text>
+                  <Text style={[styles.contactNumber, { color: colors.danger }]}>{contact.number}</Text>
                 </View>
-                <ChevronRight size={18} color="#64748b" />
+                <ChevronRight size={20} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
           </View>
@@ -179,207 +179,181 @@ export default function AlertsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090d16',
   },
   tabSelector: {
     flexDirection: 'row',
-    backgroundColor: '#0f172a',
-    padding: 6,
-    marginHorizontal: 14,
-    marginTop: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    maxWidth: 900,
+    padding: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    maxWidth: 960,
     alignSelf: 'center',
     width: '93%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
   },
   tabButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  tabButtonActive: {
-    backgroundColor: '#0284c7',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
   },
   tabButtonText: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tabButtonTextActive: {
-    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 14,
-    paddingBottom: 40,
-    maxWidth: 900,
+    padding: 16,
+    paddingBottom: 50,
+    maxWidth: 960,
     alignSelf: 'center',
     width: '100%',
   },
   section: {
-    gap: 12,
+    gap: 16,
   },
   sectionSubtitle: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '800',
     marginBottom: 4,
   },
   alertCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-  },
-  redAlert: {
-    borderColor: '#ef4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-  },
-  orangeAlert: {
-    borderColor: '#f97316',
-    backgroundColor: 'rgba(249, 115, 22, 0.08)',
-  },
-  yellowAlert: {
-    borderColor: '#eab308',
-    backgroundColor: 'rgba(234, 179, 8, 0.08)',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
   alertHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 10,
+    marginBottom: 8,
   },
   alertBadgeRed: {
-    color: '#ef4444',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '900',
   },
   alertBadgeOrange: {
-    color: '#f97316',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '900',
   },
   alertBadgeYellow: {
-    color: '#eab308',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '900',
   },
   alertTime: {
     marginLeft: 'auto',
-    color: '#64748b',
-    fontSize: 10,
+    fontSize: 11,
   },
   alertTitle: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '800',
-    marginBottom: 6,
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 8,
   },
   alertBody: {
-    color: '#cbd5e1',
-    fontSize: 11,
-    lineHeight: 16,
-    marginBottom: 10,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 12,
   },
   alertFooter: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: 8,
+    paddingTop: 10,
   },
   authorityTag: {
-    color: '#94a3b8',
-    fontSize: 9,
+    fontSize: 11,
     fontStyle: 'italic',
   },
   shelterCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
   shelterTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   shelterName: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
   },
   supplyBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
   },
   supplyText: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
   },
   shelterLocation: {
-    color: '#94a3b8',
-    fontSize: 11,
-    marginBottom: 10,
+    fontSize: 12,
+    marginBottom: 12,
   },
   shelterStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#1e293b',
-    paddingTop: 8,
+    paddingTop: 12,
   },
   shelterStatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   shelterStatVal: {
-    color: '#e2e8f0',
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   callShelterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#131d33',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    gap: 6,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   callShelterText: {
-    color: '#38bdf8',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   contactCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
   contactIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -387,19 +361,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactTitle: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
   },
   contactType: {
-    color: '#94a3b8',
-    fontSize: 10,
-    marginTop: 1,
+    fontSize: 11,
+    marginTop: 2,
   },
   contactNumber: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 2,
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: 3,
   },
 });

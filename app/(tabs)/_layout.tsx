@@ -1,25 +1,33 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Activity, AlertOctagon, Camera, Radio } from 'lucide-react-native';
+import { Activity, AlertOctagon, Camera, Radio, Settings } from 'lucide-react-native';
+import { useAppTheme } from '../../context/ThemeContext';
 
 export default function TabLayout() {
+  const { colors, isDark } = useAppTheme();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#38bdf8',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: colors.steelBlue,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: '#090d16',
-          borderTopColor: '#1e293b',
+          backgroundColor: colors.cardBg,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 86 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
-          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 88 : 68,
+          paddingBottom: Platform.OS === 'ios' ? 26 : 10,
+          paddingTop: 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: isDark ? 0.2 : 0.05,
+          shadowRadius: 6,
+          elevation: 4,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: '700',
         },
       }}
@@ -28,31 +36,37 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <Activity size={20} color={color} />,
+          tabBarIcon: ({ color }) => <Activity size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="alerts"
         options={{
           title: 'Alerts',
-          tabBarIcon: ({ color, size }) => <AlertOctagon size={20} color={color} />,
+          tabBarIcon: ({ color }) => <AlertOctagon size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="report"
         options={{
           title: 'Report',
-          tabBarIcon: ({ color, size }) => <Camera size={20} color={color} />,
+          tabBarIcon: ({ color }) => <Camera size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="sensors"
         options={{
           title: 'Sensors',
-          tabBarIcon: ({ color, size }) => <Radio size={20} color={color} />,
+          tabBarIcon: ({ color }) => <Radio size={22} color={color} />,
         }}
       />
-      {/* Hide default boilerplate two.tsx tab */}
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
+        }}
+      />
       <Tabs.Screen
         name="two"
         options={{

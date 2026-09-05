@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { RiskEvaluation } from '../services/aiEngine';
 import { AlertTriangle, CloudRain, Droplets, Mountain } from 'lucide-react-native';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface RiskGaugeProps {
   risk: RiskEvaluation;
@@ -10,31 +11,33 @@ interface RiskGaugeProps {
 }
 
 export const RiskGauge: React.FC<RiskGaugeProps> = ({ risk, telemetry, loading }) => {
+  const { colors, isDark } = useAppTheme();
+
   return (
     <View style={styles.container}>
       {/* Main Risk Card */}
-      <View style={[styles.mainCard, { borderColor: risk.badgeBorder }]}>
+      <View style={[styles.mainCard, { backgroundColor: colors.cardBg, borderColor: isDark ? colors.border : risk.badgeBorder }]}>
         <View style={styles.topRow}>
           <View style={styles.titleWithIcon}>
-            <AlertTriangle size={18} color={risk.color} />
-            <Text style={styles.cardHeader}>AI SUSCEPTIBILITY INDEX</Text>
+            <AlertTriangle size={22} color={risk.color} />
+            <Text style={[styles.cardHeader, { color: colors.textSecondary }]}>AI SUSCEPTIBILITY INDEX</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: risk.bgColor, borderColor: risk.color }]}>
+          <View style={[styles.statusBadge, { backgroundColor: risk.bgColor, borderColor: risk.badgeBorder }]}>
             <Text style={[styles.statusBadgeText, { color: risk.color }]}>{risk.level.toUpperCase()}</Text>
           </View>
         </View>
 
         <View style={styles.scoreRow}>
           <Text style={[styles.scoreValue, { color: risk.color }]}>{risk.score}</Text>
-          <Text style={styles.scoreMax}>/100</Text>
+          <Text style={[styles.scoreMax, { color: colors.textMuted }]}>/100</Text>
           <View style={styles.probabilityWrapper}>
-            <Text style={styles.probabilityLabel}>Failure Probability</Text>
+            <Text style={[styles.probabilityLabel, { color: colors.textSecondary }]}>Failure Probability</Text>
             <Text style={[styles.probabilityValue, { color: risk.color }]}>{risk.probabilityPercent}%</Text>
           </View>
         </View>
 
         {/* Dynamic Progress Meter */}
-        <View style={styles.progressBarBackground}>
+        <View style={[styles.progressBarBackground, { backgroundColor: colors.borderSoft }]}>
           <View
             style={[
               styles.progressBarFill,
@@ -47,37 +50,37 @@ export const RiskGauge: React.FC<RiskGaugeProps> = ({ risk, telemetry, loading }
         </View>
 
         {/* Advisory Banner */}
-        <View style={[styles.advisoryBox, { backgroundColor: risk.bgColor }]}>
-          <Text style={[styles.advisoryText, { color: '#e2e8f0' }]}>{risk.recommendation}</Text>
+        <View style={[styles.advisoryBox, { backgroundColor: risk.bgColor, borderColor: risk.badgeBorder }]}>
+          <Text style={[styles.advisoryText, { color: colors.textPrimary }]}>{risk.recommendation}</Text>
         </View>
 
-        {/* Factor Breakdown Grid */}
-        <View style={styles.factorsGrid}>
-          <View style={styles.factorItem}>
+        {/* Factor Breakdown Grid - Enlarged */}
+        <View style={[styles.factorsGrid, { borderTopColor: colors.borderSoft }]}>
+          <View style={[styles.factorItem, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
             <View style={styles.factorHeader}>
-              <CloudRain size={13} color="#38bdf8" />
-              <Text style={styles.factorName}>24h Rain</Text>
+              <CloudRain size={16} color={colors.steelBlue} />
+              <Text style={[styles.factorName, { color: colors.textSecondary }]}>24h Rainfall</Text>
             </View>
-            <Text style={styles.factorValue}>{telemetry?.rain_24h_sum ?? 0} mm</Text>
-            <Text style={styles.factorScore}>+{risk.factors.rainfallScore} pts</Text>
+            <Text style={[styles.factorValue, { color: colors.textPrimary }]}>{telemetry?.rain_24h_sum ?? 0} mm</Text>
+            <Text style={[styles.factorScore, { color: colors.textMuted }]}>+{risk.factors.rainfallScore} pts</Text>
           </View>
 
-          <View style={styles.factorItem}>
+          <View style={[styles.factorItem, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
             <View style={styles.factorHeader}>
-              <Droplets size={13} color="#06b6d4" />
-              <Text style={styles.factorName}>Soil Moisture</Text>
+              <Droplets size={16} color={colors.slateGray} />
+              <Text style={[styles.factorName, { color: colors.textSecondary }]}>Soil Moisture</Text>
             </View>
-            <Text style={styles.factorValue}>{((telemetry?.soil_moisture ?? 0.35) * 100).toFixed(0)}% sat</Text>
-            <Text style={styles.factorScore}>+{risk.factors.soilScore} pts</Text>
+            <Text style={[styles.factorValue, { color: colors.textPrimary }]}>{((telemetry?.soil_moisture ?? 0.35) * 100).toFixed(0)}% sat</Text>
+            <Text style={[styles.factorScore, { color: colors.textMuted }]}>+{risk.factors.soilScore} pts</Text>
           </View>
 
-          <View style={styles.factorItem}>
+          <View style={[styles.factorItem, { backgroundColor: colors.subPanel, borderColor: colors.border }]}>
             <View style={styles.factorHeader}>
-              <Mountain size={13} color="#a855f7" />
-              <Text style={styles.factorName}>Slope Baseline</Text>
+              <Mountain size={16} color={colors.taupe} />
+              <Text style={[styles.factorName, { color: colors.textSecondary }]}>Slope Baseline</Text>
             </View>
-            <Text style={styles.factorValue}>42° Avg</Text>
-            <Text style={styles.factorScore}>+{risk.factors.slopeScore} pts</Text>
+            <Text style={[styles.factorValue, { color: colors.textPrimary }]}>42° Avg</Text>
+            <Text style={[styles.factorScore, { color: colors.textMuted }]}>+{risk.factors.slopeScore} pts</Text>
           </View>
         </View>
       </View>
@@ -87,130 +90,124 @@ export const RiskGauge: React.FC<RiskGaugeProps> = ({ risk, telemetry, loading }
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 10,
+    marginVertical: 12,
   },
   mainCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1.5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
     elevation: 4,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   titleWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   cardHeader: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
     letterSpacing: 1,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1.5,
   },
   statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
   },
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   scoreValue: {
-    fontSize: 42,
+    fontSize: 52,
     fontWeight: '900',
-    letterSpacing: -1,
+    letterSpacing: -1.5,
   },
   scoreMax: {
-    fontSize: 16,
-    color: '#64748b',
-    fontWeight: '600',
-    marginLeft: 4,
+    fontSize: 18,
+    fontWeight: '700',
+    marginLeft: 6,
   },
   probabilityWrapper: {
     marginLeft: 'auto',
     alignItems: 'flex-end',
   },
   probabilityLabel: {
-    fontSize: 10,
-    color: '#64748b',
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
   probabilityValue: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
+    marginTop: 2,
   },
   progressBarBackground: {
-    height: 8,
-    backgroundColor: '#1e293b',
-    borderRadius: 4,
+    height: 12,
+    borderRadius: 6,
     overflow: 'hidden',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 6,
   },
   advisoryBox: {
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 14,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 16,
   },
   advisoryText: {
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 17,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   factorsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#1e293b',
-    paddingTop: 12,
+    paddingTop: 16,
   },
   factorItem: {
     flex: 1,
-    backgroundColor: '#131d33',
-    padding: 8,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   factorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
+    gap: 6,
+    marginBottom: 6,
   },
   factorName: {
-    fontSize: 10,
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
-  factorValue: {
-    fontSize: 13,
-    color: '#f1f5f9',
+    fontSize: 11,
     fontWeight: '700',
   },
+  factorValue: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
   factorScore: {
-    fontSize: 9,
-    color: '#64748b',
-    marginTop: 2,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

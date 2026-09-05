@@ -3,6 +3,8 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@huggingface/inference": "^4.13.28",
+    "@supabase/supabase-js": "^2.115.0",
     "expo": "~57.0.20",
     "expo-constants": "~57.0.17",
     "expo-font": "~57.0.3",
